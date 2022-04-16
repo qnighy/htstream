@@ -2,5 +2,16 @@
   "name": "htstream",
   "description": "A streaming HTTP parser",
   "version": "0.1.0",
-  "packageManager": "yarn@3.2.0"
+  "packageManager": "yarn@3.2.0",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.17.9",
+    "@babel/preset-env": "^7.16.11",
+    "@babel/preset-typescript": "^7.16.7",
+    "@jest/globals": "^27.5.1",
+    "babel-jest": "^27.5.1",
+    "jest": "^27.5.1"
+  }
 }

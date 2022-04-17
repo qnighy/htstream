@@ -129,7 +129,7 @@ export class Tokenizer {
           }
           break;
         }
-        // "before attribute name" or "self-closing start tag"
+        // "before attribute name", "self-closing start tag", "after attribute value (quoted)"
         // They are actually equivalent in terms of detecting the end of the tag
         case "beforeAttributeName": {
           // Here we have a trick: where `foo bar=42` has two attributes, we regard them as one.
@@ -189,37 +189,58 @@ export class Tokenizer {
             if (i < currentChunk.length) {
               this._state = "attributeName";
               i += /^[^ \r\n\t\f/>][^/>=]*/.exec(currentChunk.substring(i))![0].length;
-              if (i < currentChunk.length) {
-                // We have currentChunk[i] === "=". No "/" or ">" here.
-                this._state = "beforeAttributeValue";
-                i += /^=[ \r\n\t\f]*/.exec(currentChunk.substring(i))![0].length;
-                if (i < currentChunk.length) {
-                  // Whitespace or ">" doesn't come here
-                  if (currentChunk[i] === "\"") {
-                    this._state = "attributeValueDoubleQuoted";
-                  } else if (currentChunk[i] === "'") {
-                    this._state = "attributeValueSingleQuoted";
-                  } else {
-                    this._state = "attributeValueUnquoted";
-                  }
-                  // In this branch, we don't yet have a delimiter that ends the attribute value
-                  i = currentChunk.length;
-                }
-              }
             }
           }
           break;
         }
         case "attributeName":
-          throw new Error("TODO");
+          i += /^[^/>=]*/.exec(currentChunk.substring(i))![0].length;
+          if (i < currentChunk.length) {
+            if (currentChunk[i] === ">") {
+              this._state = "beforeAttributeName";
+            } else {
+              this._state = "beforeAttributeValue";
+              i++;
+            }
+          }
+          break;
         case "beforeAttributeValue":
-          throw new Error("TODO");
+          i += /^[ \r\n\t\f]*/.exec(currentChunk.substring(i))![0].length;
+          if (i < currentChunk.length) {
+            if (currentChunk[i] === "\"") {
+              this._state = "attributeValueDoubleQuoted";
+              i++;
+            } else if (currentChunk[i] === "'") {
+              this._state = "attributeValueSingleQuoted";
+              i++;
+            } else if (currentChunk[i] === ">") {
+              this._state = "beforeAttributeName";
+            } else {
+              this._state = "attributeValueUnquoted";
+            }
+          }
+          break;
         case "attributeValueDoubleQuoted":
-          throw new Error("TODO");
+          i += /^[^"]*/.exec(currentChunk.substring(i))![0].length;
+          if (i < currentChunk.length) {
+            this._state = "beforeAttributeName";
+            i++;
+          }
+          break;
         case "attributeValueSingleQuoted":
-          throw new Error("TODO");
+          i += /^[^']*/.exec(currentChunk.substring(i))![0].length;
+          if (i < currentChunk.length) {
+            this._state = "beforeAttributeName";
+            i++;
+          }
+          break;
         case "attributeValueUnquoted":
-          throw new Error("TODO");
+          i += /^[^ \r\n\t\f]*/.exec(currentChunk.substring(i))![0].length;
+          if (i < currentChunk.length) {
+            this._state = "beforeAttributeName";
+            i++;
+          }
+          break;
         default: {
           const _state: never = this._state;
           throw new Error(`Unexpected state: ${this._state}`);

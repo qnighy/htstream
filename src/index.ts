@@ -27,7 +27,7 @@ type State =
 export class Tokenizer {
   private _state: State = "data";
   private _savedChunk: string = "";
-  public addChunk(chunk: string, addToken: (token: Token) => void, handleError: (error: ParseError) => void) {
+  public addChunk(chunk: string, addToken: (token: Token) => void, _handleError: (error: ParseError) => void) {
     let currentChunk = chunk;
     let i = 0;
   consumeLoop:
@@ -241,8 +241,8 @@ export class Tokenizer {
           }
           break;
         default: {
-          const _state: never = this._state;
-          throw new Error(`Unexpected state: ${this._state}`);
+          const state: never = this._state;
+          throw new Error(`Unexpected state: ${state}`);
         }
       }
     }

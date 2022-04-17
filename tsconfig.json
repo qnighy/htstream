@@ -1,0 +1,14 @@
+{
+  "extends": "./configs/tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "emitDeclarationOnly": false
+  },
+  "include": ["./src/**/*.test.ts"],
+  "references": [
+    {
+      "path": "./configs/tsconfig.main.json"
+    }
+  ]
+}

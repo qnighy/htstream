@@ -50,6 +50,37 @@ describe("tokenize", () => {
       [">", [{ type: "StartTag", raw: "<div>"}]],
     ]);
   });
+
+  it("tokenizes open tags with attributes", async () => {
+    ensureTokenization([
+      ["<div foo=bar>", [{ type: "StartTag", raw: "<div foo=bar>"}]],
+      ["<div foo=\"bar\">", [{ type: "StartTag", raw: "<div foo=\"bar\">"}]],
+      ["<div foo='bar'>", [{ type: "StartTag", raw: "<div foo='bar'>"}]],
+      ["<div foo=bar>foo>", [{ type: "StartTag", raw: "<div foo=bar>"}, { type: "Text", raw: "foo>" }]],
+      ["<div foo=\"bar>foo\">", [{ type: "StartTag", raw: "<div foo=\"bar>foo\">"}]],
+      ["<div foo='bar>foo'>", [{ type: "StartTag", raw: "<div foo='bar>foo'>"}]],
+      ["<div foo = \"bar>foo\">", [{ type: "StartTag", raw: "<div foo = \"bar>foo\">"}]],
+      ["<div foo = 'bar>foo'>", [{ type: "StartTag", raw: "<div foo = 'bar>foo'>"}]],
+      ["<div fo=o=\"bar>foo\">", [{ type: "StartTag", raw: "<div fo=o=\"bar>"}, { type: "Text", raw: "foo\">" }]],
+      ["<div fo=o='bar>foo'>", [{ type: "StartTag", raw: "<div fo=o='bar>"}, { type: "Text", raw: "foo'>" }]],
+      ["<div =foo=\"bar>foo\">", [{ type: "StartTag", raw: "<div =foo=\"bar>foo\">"}]],
+      ["<div =foo='bar>foo'>", [{ type: "StartTag", raw: "<div =foo='bar>foo'>"}]],
+      ["<div=== foo=\"bar>foo\">", [{ type: "StartTag", raw: "<div=== foo=\"bar>foo\">"}]],
+      ["<div=== foo='bar>foo'>", [{ type: "StartTag", raw: "<div=== foo='bar>foo'>"}]],
+      ["<div a foo=\"bar>foo\">", [{ type: "StartTag", raw: "<div a foo=\"bar>foo\">"}]],
+      ["<div a foo='bar>foo'>", [{ type: "StartTag", raw: "<div a foo='bar>foo'>"}]],
+      ["<div a=b foo=\"bar>foo\">", [{ type: "StartTag", raw: "<div a=b foo=\"bar>foo\">"}]],
+      ["<div a=b foo='bar>foo'>", [{ type: "StartTag", raw: "<div a=b foo='bar>foo'>"}]],
+      ["<div a / foo=\"bar>foo\">", [{ type: "StartTag", raw: "<div a / foo=\"bar>foo\">"}]],
+      ["<div a / foo='bar>foo'>", [{ type: "StartTag", raw: "<div a / foo='bar>foo'>"}]],
+      ["<div a =foo=\"bar>foo\">", [{ type: "StartTag", raw: "<div a =foo=\"bar>"}, { type: "Text", raw: "foo\">" }]],
+      ["<div a =foo='bar>foo'>", [{ type: "StartTag", raw: "<div a =foo='bar>"}, { type: "Text", raw: "foo'>" }]],
+      ["<div a=b =foo=\"bar>foo\">", [{ type: "StartTag", raw: "<div a=b =foo=\"bar>foo\">"}]],
+      ["<div a=b =foo='bar>foo'>", [{ type: "StartTag", raw: "<div a=b =foo='bar>foo'>"}]],
+      ["<div a / =foo=\"bar>foo\">", [{ type: "StartTag", raw: "<div a / =foo=\"bar>foo\">"}]],
+      ["<div a / =foo='bar>foo'>", [{ type: "StartTag", raw: "<div a / =foo='bar>foo'>"}]],
+    ]);
+  });
 });
 
 type TokenStreamExpectation = (string | [string, Token[], ParseError[]?])[];

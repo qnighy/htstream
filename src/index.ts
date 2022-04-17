@@ -12,7 +12,17 @@ export type EndTagToken = {
   raw: string;
 };
 export type ParseError = "invalid-first-character-of-tag-name";
-type State = "data" | "tagOpen" | "endTagOpen" | "tagName" | "beforeAttributeName" | "attributeName";
+type State =
+  | "data"
+  | "tagOpen"
+  | "endTagOpen"
+  | "tagName"
+  | "beforeAttributeName"
+  | "attributeName"
+  | "beforeAttributeValue"
+  | "attributeValueDoubleQuoted"
+  | "attributeValueSingleQuoted"
+  | "attributeValueUnquoted";
 
 export class Tokenizer {
   private _state: State = "data";
@@ -99,6 +109,7 @@ export class Tokenizer {
           const match = /[ \r\n\t\f/>]/.exec(currentChunk.substring(i));
           if (match) {
             if (match[0] === ">") {
+              // <foo>
               i += match.index + 1;
               const raw = this._savedChunk + currentChunk.substring(0, i);
               addToken({
@@ -110,12 +121,108 @@ export class Tokenizer {
               i = 0;
               this._state = "data";
             } else {
-              throw new Error("TODO");
+              i += match.index + 1;
+              this._state = "beforeAttributeName";
             }
           } else {
             break consumeLoop;
           }
           break;
+        }
+        // "before attribute name" or "self-closing start tag"
+        // They are actually equivalent in terms of detecting the end of the tag
+        case "beforeAttributeName": {
+          // Here we have a trick: where `foo bar=42` has two attributes, we regard them as one.
+          // Concatenation happens if the former attribute does not have a value.
+          // /
+          //   # Skip whitespace before the attribute but `/` is treated the same whether it's part of `/>` or not (i.e. invalid occurrence of /)
+          //   ^[ \r\n\t\f/]*
+          //   # Repeat greedily to process all attributes
+          //   (?:
+          //     # An invalid equal sign can come here as part of the attribute name
+          //     [^ \r\n\t\f/>]
+          //     # No equal sign after the 2nd character.
+          //     # We regard whitespace as part of the attribute name here
+          //     [^/>=]*
+          //     (?:
+          //       # Slash here resets the state (i.e. we can use = again)
+          //       /
+          //       # Attribute value follows
+          //       | =
+          //         [ \r\n\t\f]*
+          //         (?:
+          //           # Quoted
+          //           "[^"]*"
+          //           | '[^']*'
+          //           # Unquoted
+          //           | [^ \r\n\t\f>"'][^ \r\n\t\f>]*(?=[ \r\n\t\f>])
+          //           # Or immediate exit
+          //           | (?=>)
+          //         )
+          //       # Or immediate exit
+          //       | (?=>)
+          //     )
+          //     # Skip whitespace before the attribute as in the first step
+          //     [ \r\n\t\f/]*
+          //   )*
+          //   # Closing token
+          //   (>?)
+          // /
+          const re = /^[ \r\n\t\f/]*(?:[^ \r\n\t\f/>][^/>=]*(?:\/|=[ \r\n\t\f]*(?:"[^"]*"|'[^']*'|[^ \r\n\t\f>"'][^ \r\n\t\f>]*(?=[ \r\n\t\f>])|(?=>))|(?=>))[ \r\n\t\f/]*)*(>?)/;
+          const match = re.exec(currentChunk.substring(i))!;
+          if (match[1].length > 0) {
+            // Full tag
+            i += match[0].length;
+            const raw = this._savedChunk + currentChunk.substring(0, i);
+            addToken({
+              type: raw.startsWith("</") ? "EndTag" : "StartTag",
+              raw,
+            });
+            this._savedChunk = "";
+            currentChunk = currentChunk.substring(i);
+            i = 0;
+            this._state = "data";
+          } else {
+            // Partial tag; this addition doesn't change the state
+            i += match[0].length;
+            // Progress state machine one-by-one
+            if (i < currentChunk.length) {
+              this._state = "attributeName";
+              i += /^[^ \r\n\t\f/>][^/>=]*/.exec(currentChunk.substring(i))![0].length;
+              if (i < currentChunk.length) {
+                // We have currentChunk[i] === "=". No "/" or ">" here.
+                this._state = "beforeAttributeValue";
+                i += /^=[ \r\n\t\f]*/.exec(currentChunk.substring(i))![0].length;
+                if (i < currentChunk.length) {
+                  // Whitespace or ">" doesn't come here
+                  if (currentChunk[i] === "\"") {
+                    this._state = "attributeValueDoubleQuoted";
+                  } else if (currentChunk[i] === "'") {
+                    this._state = "attributeValueSingleQuoted";
+                  } else {
+                    this._state = "attributeValueUnquoted";
+                  }
+                  // In this branch, we don't yet have a delimiter that ends the attribute value
+                  i = currentChunk.length;
+                }
+              }
+            }
+          }
+          break;
+        }
+        case "attributeName":
+          throw new Error("TODO");
+        case "beforeAttributeValue":
+          throw new Error("TODO");
+        case "attributeValueDoubleQuoted":
+          throw new Error("TODO");
+        case "attributeValueSingleQuoted":
+          throw new Error("TODO");
+        case "attributeValueUnquoted":
+          throw new Error("TODO");
+        default: {
+          const _state: never = this._state;
+          throw new Error(`Unexpected state: ${this._state}`);
         }
       }
     }

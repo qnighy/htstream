@@ -37,6 +37,19 @@ describe("tokenize", () => {
       ["Hello, <strong>", [{ type: "Text", raw: "Hello, " }, { type: "StartTag", raw: "<strong>"}]],
     ]);
   });
+
+  it("tokenizes end tags", async () => {
+    ensureTokenization([
+      ["<div>", [{ type: "StartTag", raw: "<div>"}]],
+      "</",
+      ["div><", [{ type: "EndTag", raw: "</div>"}]],
+      ["div><", [{ type: "StartTag", raw: "<div>"}]],
+      ["/div><d", [{ type: "EndTag", raw: "</div>"}]],
+      ["iv></d", [{ type: "StartTag", raw: "<div>"}]],
+      ["iv><div", [{ type: "EndTag", raw: "</div>"}]],
+      [">", [{ type: "StartTag", raw: "<div>"}]],
+    ]);
+  });
 });
 
 type TokenStreamExpectation = (string | [string, Token[], ParseError[]?])[];

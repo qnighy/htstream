@@ -1,10 +1,14 @@
-export type Token = TextToken | StartTagToken;
+export type Token = TextToken | StartTagToken | EndTagToken;
 export type TextToken = {
   type: "Text";
   raw: string;
 };
 export type StartTagToken = {
   type: "StartTag";
+  raw: string;
+};
+export type EndTagToken = {
+  type: "EndTag";
   raw: string;
 };
 export type ParseError = "invalid-first-character-of-tag-name";
@@ -96,9 +100,10 @@ export class Tokenizer {
           if (match) {
             if (match[0] === ">") {
               i += match.index + 1;
+              const raw = this._savedChunk + currentChunk.substring(0, i);
               addToken({
-                type: "StartTag",
-                raw: this._savedChunk + currentChunk.substring(0, i),
+                type: raw.startsWith("</") ? "EndTag" : "StartTag",
+                raw,
               });
               this._savedChunk = "";
               currentChunk = currentChunk.substring(i);

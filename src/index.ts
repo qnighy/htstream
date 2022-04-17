@@ -196,11 +196,11 @@ export class Tokenizer {
         case "attributeName":
           i += /^[^/>=]*/.exec(currentChunk.substring(i))![0].length;
           if (i < currentChunk.length) {
-            if (currentChunk[i] === ">") {
-              this._state = "beforeAttributeName";
-            } else {
+            if (currentChunk[i] === "=") {
               this._state = "beforeAttributeValue";
               i++;
+            } else {
+              this._state = "beforeAttributeName";
             }
           }
           break;
@@ -235,10 +235,9 @@ export class Tokenizer {
           }
           break;
         case "attributeValueUnquoted":
-          i += /^[^ \r\n\t\f]*/.exec(currentChunk.substring(i))![0].length;
+          i += /^[^ \r\n\t\f>]*/.exec(currentChunk.substring(i))![0].length;
           if (i < currentChunk.length) {
             this._state = "beforeAttributeName";
-            i++;
           }
           break;
         default: {

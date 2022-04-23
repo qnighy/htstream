@@ -1,16 +1,8 @@
-export type Token = TextToken | StartTagToken | EndTagToken;
-export type TextToken = {
-  type: "Text";
-  raw: string;
-};
-export type StartTagToken = {
-  type: "StartTag";
-  raw: string;
-};
-export type EndTagToken = {
-  type: "EndTag";
-  raw: string;
-};
+import type { Token } from "./token";
+import { TextToken, StartTagToken, EndTagToken } from "./token";
+
+export type { Token } from "./token";
+export { TextToken, StartTagToken, EndTagToken } from "./token";
 export type ParseError = "invalid-first-character-of-tag-name";
 type State =
   | "data"
@@ -53,11 +45,8 @@ export class Tokenizer {
             i += /^[^<&]*/.exec(currentChunk.substring(i))![0].length;
           }
           if (0 < i) {
-            addToken({
-              type: "Text",
-              // savedChunk is empty here
-              raw: currentChunk.substring(0, i),
-            });
+            // savedChunk is empty here
+            addToken(TextToken.createRawToken(currentChunk.substring(0, i)));
           }
           currentChunk = currentChunk.substring(i);
           i = 0;
@@ -112,10 +101,7 @@ export class Tokenizer {
               // <foo>
               i += match.index + 1;
               const raw = this._savedChunk + currentChunk.substring(0, i);
-              addToken({
-                type: raw.startsWith("</") ? "EndTag" : "StartTag",
-                raw,
-              });
+              addToken(raw.startsWith("</") ? EndTagToken.createRawToken(raw) : StartTagToken.createRawToken(raw));
               this._savedChunk = "";
               currentChunk = currentChunk.substring(i);
               i = 0;
@@ -174,10 +160,7 @@ export class Tokenizer {
             // Full tag
             i += match[0].length;
             const raw = this._savedChunk + currentChunk.substring(0, i);
-            addToken({
-              type: raw.startsWith("</") ? "EndTag" : "StartTag",
-              raw,
-            });
+            addToken(raw.startsWith("</") ? EndTagToken.createRawToken(raw) : StartTagToken.createRawToken(raw));
             this._savedChunk = "";
             currentChunk = currentChunk.substring(i);
             i = 0;

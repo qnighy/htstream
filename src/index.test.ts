@@ -1,27 +1,19 @@
 import { describe, expect, it, xit } from "@jest/globals";
 import { Token, TextToken, StartTagToken, EndTagToken } from "./token";
-import { ParseError, Tokenizer } from "./index";
+import { Tokenizer } from "./index";
 
 describe("tokenize", () => {
   it("tokenizes the empty text", async () => {
-    ensureTokenization([]);
+    expect(tokenizeAll([])).toEqual([]);
   });
   it("tokenizes simple texts", async () => {
-    ensureTokenization([
-      ["Hello, world!", [TextToken.createRawToken("Hello, world!")]],
+    expect(tokenizeAll(["Hello, world!"])).toEqual([
+      TextToken.createRawToken("Hello, world!"),
     ]);
-    ensureTokenization([
-      ["See <", [TextToken.createRawToken("See ")]],
+    expect(tokenizeAll(["Hello, ", "world!"])).toEqual([
+      TextToken.createRawToken("Hello, "),
+      TextToken.createRawToken("world!"),
     ]);
-    ensureTokenization([
-      ["See <>", [TextToken.createRawToken("See <>")]],
-    ]);
-    ensureTokenization([
-      ["Hello.</", [TextToken.createRawToken("Hello.")]],
-    ]);
-    // ensureTokenization([
-    //   ["Hello.</#", [TextToken.createRawToken("Hello.</#")]],
-    // ]);
   });
 });
 
@@ -68,29 +60,15 @@ describe("tokenize (white box testing)", () => {
   });
 });
 
-type TokenStreamExpectation = (string | [string, Token[], ParseError[]?])[];
-
-function ensureTokenization(expectation: TokenStreamExpectation) {
+function tokenizeAll(chunks: string[]): Token[] {
   const tokenizer = new Tokenizer();
-  const result: TokenStreamExpectation = [];
-  for (const chunkAndMeta of expectation) {
-    const chunk = typeof chunkAndMeta === "string" ? chunkAndMeta : chunkAndMeta[0];
-    const tokens: Token[] = [];
-    const errors: ParseError[] = [];
+  const tokens: Token[] = [];
+  for (const chunk of chunks) {
     tokenizer.addChunk(chunk, (token) => {
       tokens.push(token);
-    }, (error) => {
-      errors.push(error);
-    });
-    if (errors.length > 0 ) {
-      result.push([chunk, tokens, errors]);
-    } else if (tokens.length > 0) {
-      result.push([chunk, tokens]);
-    } else {
-      result.push(chunk);
-    }
+    }, () => {});
   }
-  expect(result).toEqual(expectation);
+  return tokens;
 }
 
 function whiteBoxTest(parts: string[]) {

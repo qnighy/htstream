@@ -1,5 +1,7 @@
 import { evaluateCharacterReference } from "./charref";
 
+export type Token = TextToken | StartTagToken | EndTagToken;
+
 export class TextToken {
   declare type: "Text";
   static {
@@ -17,7 +19,7 @@ export class TextToken {
     this._value = value;
   }
   public static createRawToken(raw: string, ambiguousSuffix?: string): TextToken {
-    const token = Object.create(TextToken.prototype);
+    const token: TextToken = Object.create(TextToken.prototype);
     token._value = undefined;
     token._raw = raw;
     token._ambiguousSuffix = ambiguousSuffix;
@@ -42,5 +44,62 @@ export class TextToken {
       );
       return this._value = value;
     }
+  }
+  public get raw(): string | undefined {
+    return this._raw;
+  }
+}
+
+export class StartTagToken {
+  declare type: "StartTag";
+  static {
+    this.prototype.type = "StartTag";
+  }
+
+  readonly name: string;
+  private _raw?: string;
+  constructor(name: string) {
+    this.name = normalizeTagName(name);
+  }
+  public static createRawToken(raw: string): StartTagToken {
+    const name = normalizeTagName(/^<([a-zA-Z][^ \r\n\t\f/>]*)/.exec(raw)?.[1] ?? "");
+    const token: StartTagToken = Object.create(StartTagToken.prototype);
+    (token as { name: string }).name = name;
+    token._raw = raw;
+    return token;
+  }
+  public get raw(): string | undefined {
+    return this._raw;
+  }
+}
+
+export class EndTagToken {
+  declare type: "EndTag";
+  static {
+    this.prototype.type = "EndTag";
+  }
+
+  readonly name: string;
+  private _raw?: string;
+  constructor(name: string) {
+    this.name = normalizeTagName(name);
+  }
+  public static createRawToken(raw: string): EndTagToken {
+    const name = normalizeTagName(/^<\/([a-zA-Z][^ \r\n\t\f/>]*)/.exec(raw)?.[1] ?? "");
+    const token: EndTagToken = Object.create(EndTagToken.prototype);
+    (token as { name: string }).name = name;
+    token._raw = raw;
+    return token;
+  }
+  public get raw(): string | undefined {
+    return this._raw;
+  }
+}
+
+export function normalizeTagName(s: string): string {
+  if (/^[a-zA-Z0-9]+$/.test(s)) {
+    return s.toLowerCase();
+  } else {
+    return s.replace(/[A-Z\0]/g, (c) => c === "\0" ? "\uFFFD" : c.toLowerCase());
   }
 }

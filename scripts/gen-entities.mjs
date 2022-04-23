@@ -30,8 +30,8 @@ for (const [name, { codepoints, characters }] of Object.entries(json)) {
 }
 
 let src = "export const entities: Record<string, string> = {\n";
-for (const [name, { codepoints, characters }] of Object.entries(json)) {
-  if (/^&[a-zA-Z][a-zA-Z0-9]*;$/.test(name)) {
+for (const [name, { codepoints }] of Object.entries(json)) {
+  if (name.endsWith(";")) {
     const str = codepoints.map((cp) => {
       if (cp < 0x10000) {
         return `\\u${cp.toString(16).toUpperCase().padStart(4, "0")}`;
@@ -43,6 +43,22 @@ for (const [name, { codepoints, characters }] of Object.entries(json)) {
   }
 }
 src += "};\n";
+src += "\n";
+
+/** @type {string[]} */
+const semilessKeys = [];
+for (const name of Object.keys(json)) {
+  if (!name.endsWith(";")) {
+    semilessKeys.push(name.substring(1));
+  }
+}
+semilessKeys.sort();
+src += `export const semilessEntities: string[] = [\n`;
+for (const semilessKey of semilessKeys) {
+  src += `  "${semilessKey}",\n`;
+}
+src += "];\n";
+
 await fs.promises.writeFile("src/entities.ts", src);
 
 /**

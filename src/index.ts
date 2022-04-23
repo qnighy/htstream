@@ -231,4 +231,13 @@ export class Tokenizer {
     }
     this._savedChunk += currentChunk;
   }
+  clone(): Tokenizer {
+    return Object.create(Tokenizer.prototype, {
+      _state: { value: this._state, writable: true, configurable: true, enumerable: true },
+      _savedChunk: { value: this._savedChunk, writable: true, configurable: true, enumerable: true },
+    });
+  }
+  equals(other: Tokenizer): boolean {
+    return this._state === other._state && this._savedChunk === other._savedChunk;
+  }
 }

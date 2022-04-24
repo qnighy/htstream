@@ -71,7 +71,7 @@ function tokenizeAll(chunks: string[]): Token[] {
   for (const chunk of chunks) {
     tokenizer.addChunk(chunk, (token) => {
       tokens.push(token);
-    }, () => {});
+    });
   }
   return tokens;
 }
@@ -104,7 +104,7 @@ function whiteBoxTest(parts: string[]) {
         const result: Token[] = [];
         tokenizer.addChunk(part[i], (token) => {
           result.push(token);
-        }, () => {});
+        });
         expectedAll.push(expected);
         resultAll.push(result);
         states.push(tokenizer.clone());
@@ -138,7 +138,7 @@ function whiteBoxTest(parts: string[]) {
         const result: Token[] = [];
         tokenizer.addChunk(chunk, (token) => {
           result.push(token);
-        }, () => {});
+        });
         expectedAll[`${i}-${j}`] = {
           output: expected,
           state: states[j],

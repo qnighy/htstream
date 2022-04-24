@@ -14,12 +14,11 @@ export type {
   EndTagToken,
   RawEndTagToken,
 } from "./token";
-export type ParseError = "invalid-first-character-of-tag-name";
 
 export class Tokenizer {
   private _state: State = "data";
   private _savedChunk: string = "";
-  public addChunk(chunk: string, addToken: (token: RawToken) => void, _handleError: (error: ParseError) => void) {
+  public addChunk(chunk: string, addToken: (token: RawToken) => void) {
     let state: State | "emitTag" = this._state;
     let savedChunk = this._savedChunk;
     let currentChunk = chunk;

@@ -1,148 +1,93 @@
 import { describe, expect, it } from "@jest/globals";
-import { TextToken, normalizeTagName, StartTagToken, EndTagToken } from "./token";
+import { normalizeTagName, createRawStartTagToken, textValue, createRawTextToken, createTextToken, createStartTagToken, createEndTagToken, createRawEndTagToken } from "./token";
 
-describe("TextToken", () => {
-  describe("constructor", () => {
-    it("returns a TextToken with the specified text", () => {
-      expect(new TextToken("foo").value).toBe("foo");
-      expect(new TextToken("<foo> & <bar>").value).toBe("<foo> & <bar>");
-    });
-
-    it("returns a TextToken without a raw text", () => {
-      expect(new TextToken("foo").raw).toBe(undefined);
-      expect(new TextToken("<foo> & <bar>").raw).toBe(undefined);
-    });
-  });
-
-  describe("createRawToken", () => {
-    it("returns an instance of TextToken", () => {
-      expect(TextToken.createRawToken("Hello, world!")).toBeInstanceOf(TextToken);
-      expect(TextToken.createRawToken("a & b")).toBeInstanceOf(TextToken);
-    });
-
-    it("returns a TextToken with the specified raw text", () => {
-      expect(TextToken.createRawToken("Hello, world!").raw).toBe("Hello, world!");
-      expect(TextToken.createRawToken("a &amp; b\r\n").raw).toBe("a &amp; b\r\n");
-      expect(TextToken.createRawToken("a & b\n").raw).toBe("a & b\n");
-    });
-
-    describe("value", () => {
-      it("returns the parsed value (general case)", () => {
-        expect(TextToken.createRawToken("Hello, world!").value).toBe("Hello, world!");
-      });
-
-      it("doesn't substitute stray <s", () => {
-        expect(TextToken.createRawToken("a < b").value).toBe("a < b");
-      });
-
-      it("doesn't substitute invalid &s", () => {
-        expect(TextToken.createRawToken("a &").value).toBe("a &");
-        expect(TextToken.createRawToken("a & b").value).toBe("a & b");
-        expect(TextToken.createRawToken("foo&bar;").value).toBe("foo&bar;");
-        expect(TextToken.createRawToken("<&>").value).toBe("<&>");
-        expect(TextToken.createRawToken("<&#>").value).toBe("<&#>");
-        expect(TextToken.createRawToken("<&;>").value).toBe("<&;>");
-        expect(TextToken.createRawToken("<&#x>").value).toBe("<&#x>");
-        expect(TextToken.createRawToken("<&#z>").value).toBe("<&#z>");
-      });
-
-      it("substitutes character references", () => {
-        expect(TextToken.createRawToken("a &amp; b").value).toBe("a & b");
-        expect(TextToken.createRawToken("a&ampb").value).toBe("a&b");
-        expect(TextToken.createRawToken("a &notin; b").value).toBe("a \u2209 b");
-        expect(TextToken.createRawToken("a &notit; b").value).toBe("a \u00ACit; b");
-        expect(TextToken.createRawToken("a &#38; b").value).toBe("a & b");
-        expect(TextToken.createRawToken("a &#38 b").value).toBe("a & b");
-        expect(TextToken.createRawToken("a&#38b").value).toBe("a&b");
-      });
-
-      it("substitutes CR and CRLF", () => {
-        expect(TextToken.createRawToken("a\r\n").value).toBe("a\n");
-        expect(TextToken.createRawToken("a\r").value).toBe("a\n");
-        expect(TextToken.createRawToken("a\n\n\nb\n\n\rc\n\r\nd\n\r\re\r\n\nf\r\n\rg\r\r\nh\r\r\ri").value).toBe("a\n\n\nb\n\n\nc\n\nd\n\n\ne\n\nf\n\ng\n\nh\n\n\ni");
-      });
-    });
-
+describe("createStartTagToken", () => {
+  it("normalizes the tag name", () => {
+    expect(createStartTagToken("FOO").tagName).toBe("foo");
+    expect(createStartTagToken("F\xD2\xD3").tagName).toBe("f\xD2\xD3");
+    expect(createStartTagToken("F\0O").tagName).toBe("f\uFFFDo");
   });
 });
 
-describe("StartTagToken", () => {
-  describe("constructor", () => {
-    it("returns a StartTagToken with the specified name", () => {
-      expect(new StartTagToken("foo").name).toBe("foo");
-    });
-
-    it("normalizes the tag name", () => {
-      expect(new StartTagToken("FOO").name).toBe("foo");
-      expect(new StartTagToken("F\xD2\xD3").name).toBe("f\xD2\xD3");
-      expect(new StartTagToken("F\0O").name).toBe("f\uFFFDo");
-    });
-
-    it("returns a TextToken without a raw text", () => {
-      expect(new StartTagToken("foo").raw).toBe(undefined);
-    });
+describe("createRawStartTagToken", () => {
+  it("extracts the tag name", () => {
+    expect(createRawStartTagToken("<foo>").tagName).toBe("foo");
+    expect(createRawStartTagToken("<foo-bar baz=baz>").tagName).toBe("foo-bar");
+    expect(createRawStartTagToken("<foo-bar/>").tagName).toBe("foo-bar");
   });
 
-  describe("createRawToken", () => {
-    it("returns an instance of StartTagToken", () => {
-      expect(StartTagToken.createRawToken("<foo>")).toBeInstanceOf(StartTagToken);
-    });
-
-    it("returns a StartTagToken with the specified raw text", () => {
-      expect(StartTagToken.createRawToken("<foo>").raw).toBe("<foo>");
-      expect(StartTagToken.createRawToken("<FOO>").raw).toBe("<FOO>");
-      expect(StartTagToken.createRawToken("<foo  bar=baz>").raw).toBe("<foo  bar=baz>");
-      expect(StartTagToken.createRawToken("<foo  bar=\"baz\">").raw).toBe("<foo  bar=\"baz\">");
-    });
-
-    it("extracts the tag name", () => {
-      expect(StartTagToken.createRawToken("<foo>").name).toBe("foo");
-    });
-
-    it("normalizes the extracted tag name", () => {
-      expect(StartTagToken.createRawToken("<FOO>").name).toBe("foo");
-      expect(StartTagToken.createRawToken("<F\xD2\xD3>").name).toBe("f\xD2\xD3");
-      expect(StartTagToken.createRawToken("<F\0O>").name).toBe("f\uFFFDo");
-    });
+  it("normalizes the extracted tag name", () => {
+    expect(createRawStartTagToken("<FOO>").tagName).toBe("foo");
+    expect(createRawStartTagToken("<F\xD2\xD3>").tagName).toBe("f\xD2\xD3");
+    expect(createRawStartTagToken("<F\0O>").tagName).toBe("f\uFFFDo");
   });
 });
 
-describe("EndTagToken", () => {
-  describe("constructor", () => {
-    it("returns a EndTagToken with the specified name", () => {
-      expect(new EndTagToken("foo").name).toBe("foo");
-    });
+describe("createEndTagToken", () => {
+  it("normalizes the tag name", () => {
+    expect(createEndTagToken("FOO").tagName).toBe("foo");
+    expect(createEndTagToken("F\xD2\xD3").tagName).toBe("f\xD2\xD3");
+    expect(createEndTagToken("F\0O").tagName).toBe("f\uFFFDo");
+  });
+});
 
-    it("normalizes the tag name", () => {
-      expect(new EndTagToken("FOO").name).toBe("foo");
-      expect(new EndTagToken("F\xD2\xD3").name).toBe("f\xD2\xD3");
-      expect(new EndTagToken("F\0O").name).toBe("f\uFFFDo");
-    });
+describe("createRawEndTagToken", () => {
+  it("extracts the tag name", () => {
+    expect(createRawEndTagToken("</foo>").tagName).toBe("foo");
+    expect(createRawEndTagToken("</foo-bar baz=baz>").tagName).toBe("foo-bar");
+    expect(createRawEndTagToken("</foo-bar/>").tagName).toBe("foo-bar");
+  });
 
-    it("returns a TextToken without a raw text", () => {
-      expect(new EndTagToken("foo").raw).toBe(undefined);
+  it("normalizes the extracted tag name", () => {
+    expect(createRawEndTagToken("</FOO>").tagName).toBe("foo");
+    expect(createRawEndTagToken("</F\xD2\xD3>").tagName).toBe("f\xD2\xD3");
+    expect(createRawEndTagToken("</F\0O>").tagName).toBe("f\uFFFDo");
+  });
+});
+
+describe("textValue", () => {
+  describe("for TextToken", () => {
+    it("returns the value as-is", () => {
+      expect(textValue(createTextToken("Hello, world!"))).toBe("Hello, world!");
+      expect(textValue(createTextToken("a < b"))).toBe("a < b");
+      expect(textValue(createTextToken("<a>&amp;</a>"))).toBe("<a>&amp;</a>");
     });
   });
 
-  describe("createRawToken", () => {
-    it("returns an instance of EndTagToken", () => {
-      expect(EndTagToken.createRawToken("</foo>")).toBeInstanceOf(EndTagToken);
+  describe("for RawTextToken", () => {
+    it("returns the parsed value (general case)", () => {
+      expect(textValue(createRawTextToken("Hello, world!"))).toBe("Hello, world!");
     });
 
-    it("returns a EndTagToken with the specified raw text", () => {
-      expect(EndTagToken.createRawToken("</foo>").raw).toBe("</foo>");
-      expect(EndTagToken.createRawToken("</FOO>").raw).toBe("</FOO>");
-      expect(EndTagToken.createRawToken("</foo  >").raw).toBe("</foo  >");
+    it("doesn't substitute stray <s", () => {
+      expect(textValue(createRawTextToken("a < b"))).toBe("a < b");
     });
 
-    it("extracts the tag name", () => {
-      expect(EndTagToken.createRawToken("</foo>").name).toBe("foo");
+    it("doesn't substitute invalid &s", () => {
+      expect(textValue(createRawTextToken("a &"))).toBe("a &");
+      expect(textValue(createRawTextToken("a & b"))).toBe("a & b");
+      expect(textValue(createRawTextToken("foo&bar;"))).toBe("foo&bar;");
+      expect(textValue(createRawTextToken("<&>"))).toBe("<&>");
+      expect(textValue(createRawTextToken("<&#>"))).toBe("<&#>");
+      expect(textValue(createRawTextToken("<&;>"))).toBe("<&;>");
+      expect(textValue(createRawTextToken("<&#x>"))).toBe("<&#x>");
+      expect(textValue(createRawTextToken("<&#z>"))).toBe("<&#z>");
     });
 
-    it("normalizes the extracted tag name", () => {
-      expect(EndTagToken.createRawToken("</FOO>").name).toBe("foo");
-      expect(EndTagToken.createRawToken("</F\xD2\xD3>").name).toBe("f\xD2\xD3");
-      expect(EndTagToken.createRawToken("</F\0O>").name).toBe("f\uFFFDo");
+    it("substitutes character references", () => {
+      expect(textValue(createRawTextToken("a &amp; b"))).toBe("a & b");
+      expect(textValue(createRawTextToken("a&ampb"))).toBe("a&b");
+      expect(textValue(createRawTextToken("a &notin; b"))).toBe("a \u2209 b");
+      expect(textValue(createRawTextToken("a &notit; b"))).toBe("a \u00ACit; b");
+      expect(textValue(createRawTextToken("a &#38; b"))).toBe("a & b");
+      expect(textValue(createRawTextToken("a &#38 b"))).toBe("a & b");
+      expect(textValue(createRawTextToken("a&#38b"))).toBe("a&b");
+    });
+
+    it("substitutes CR and CRLF", () => {
+      expect(textValue(createRawTextToken("a\r\n"))).toBe("a\n");
+      expect(textValue(createRawTextToken("a\r"))).toBe("a\n");
+      expect(textValue(createRawTextToken("a\n\n\nb\n\n\rc\n\r\nd\n\r\re\r\n\nf\r\n\rg\r\r\nh\r\r\ri"))).toBe("a\n\n\nb\n\n\nc\n\nd\n\n\ne\n\nf\n\ng\n\nh\n\n\ni");
     });
   });
 });

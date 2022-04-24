@@ -1,9 +1,19 @@
 import { maybeInCharacterReference } from "./charref";
-import type { Token } from "./token";
-import { TextToken, StartTagToken, EndTagToken } from "./token";
+import { createRawEndTagToken, createRawStartTagToken, createRawTextToken, RawToken } from "./token";
 
-export type { Token } from "./token";
-export { TextToken, StartTagToken, EndTagToken } from "./token";
+export type {
+  Token,
+  RawToken,
+  TextTokenLike,
+  StartTagTokenLike,
+  EndTagTokenLike,
+  TextToken,
+  RawTextToken,
+  StartTagToken,
+  RawStartTagToken,
+  EndTagToken,
+  RawEndTagToken,
+} from "./token";
 export type ParseError = "invalid-first-character-of-tag-name";
 type State =
   | "data"
@@ -20,7 +30,7 @@ type State =
 export class Tokenizer {
   private _state: State = "data";
   private _savedChunk: string = "";
-  public addChunk(chunk: string, addToken: (token: Token) => void, _handleError: (error: ParseError) => void) {
+  public addChunk(chunk: string, addToken: (token: RawToken) => void, _handleError: (error: ParseError) => void) {
     let currentChunk = chunk;
     let i = 0;
   consumeLoop:
@@ -72,7 +82,7 @@ export class Tokenizer {
           }
           if (0 < i) {
             // savedChunk is empty here
-            addToken(TextToken.createRawToken(currentChunk.substring(0, i)));
+            addToken(createRawTextToken(currentChunk.substring(0, i)));
           }
           currentChunk = currentChunk.substring(i);
           i = 0;
@@ -128,7 +138,7 @@ export class Tokenizer {
               // <foo>
               i += match.index + 1;
               const raw = this._savedChunk + currentChunk.substring(0, i);
-              addToken(raw.startsWith("</") ? EndTagToken.createRawToken(raw) : StartTagToken.createRawToken(raw));
+              addToken(raw.startsWith("</") ? createRawEndTagToken(raw) : createRawStartTagToken(raw));
               this._savedChunk = "";
               currentChunk = currentChunk.substring(i);
               i = 0;
@@ -187,7 +197,7 @@ export class Tokenizer {
             // Full tag
             i += match[0].length;
             const raw = this._savedChunk + currentChunk.substring(0, i);
-            addToken(raw.startsWith("</") ? EndTagToken.createRawToken(raw) : StartTagToken.createRawToken(raw));
+            addToken(raw.startsWith("</") ? createRawEndTagToken(raw) : createRawStartTagToken(raw));
             this._savedChunk = "";
             currentChunk = currentChunk.substring(i);
             i = 0;

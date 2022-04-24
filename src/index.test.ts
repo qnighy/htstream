@@ -1,5 +1,5 @@
-import { describe, expect, it, xit } from "@jest/globals";
-import { Token, TextToken, StartTagToken, EndTagToken } from "./token";
+import { describe, expect, it } from "@jest/globals";
+import { Token, createRawTextToken, createRawStartTagToken, createRawEndTagToken, textValue, RawTextToken } from "./token";
 import { Tokenizer } from "./index";
 
 describe("tokenize", () => {
@@ -8,11 +8,11 @@ describe("tokenize", () => {
   });
   it("tokenizes simple texts", async () => {
     expect(tokenizeAll(["Hello, world!"])).toEqual([
-      TextToken.createRawToken("Hello, world!"),
+      createRawTextToken("Hello, world!"),
     ]);
     expect(tokenizeAll(["Hello, ", "world!"])).toEqual([
-      TextToken.createRawToken("Hello, "),
-      TextToken.createRawToken("world!"),
+      createRawTextToken("Hello, "),
+      createRawTextToken("world!"),
     ]);
   });
 });
@@ -87,11 +87,11 @@ function whiteBoxTest(parts: string[]) {
         const expected: Token[] = [];
         if (i + 1 === part.length) {
           if (part.startsWith("</")) {
-            expected.push(EndTagToken.createRawToken(part));
+            expected.push(createRawEndTagToken(part));
           } else if (/^<[a-zA-Z]/.test(part)) {
-            expected.push(StartTagToken.createRawToken(part));
+            expected.push(createRawStartTagToken(part));
           } else {
-            expected.push(TextToken.createRawToken(part));
+            expected.push(createRawTextToken(part));
           }
         }
         const result: Token[] = [];
@@ -118,20 +118,18 @@ function whiteBoxTest(parts: string[]) {
         const expected: Token[] = [];
         for (let k = i; k < j; k++) {
           for (const token of outputs[k]) {
-            if (token.type === "Text" && expected.length > 0 && expected[expected.length - 1].type === "Text") {
-              const lastToken = expected.pop()! as TextToken;
-              const newToken = TextToken.createRawToken(lastToken.raw! + token.raw!);
-              expect(lastToken.value + token.value).toBe(newToken.value);
+            if (token.type === "RawTextToken" && expected.length > 0 && expected[expected.length - 1].type === "RawTextToken") {
+              const lastToken = expected.pop()! as RawTextToken;
+              const newToken = createRawTextToken(lastToken.raw + token.raw);
+              expect(textValue(lastToken) + textValue(token)).toBe(textValue(newToken));
               expected.push(newToken);
             } else {
-              if (token.type === "Text") token.value; // touch
               expected.push(token);
             }
           }
         }
         const result: Token[] = [];
         tokenizer.addChunk(chunk, (token) => {
-          if (token.type === "Text") token.value; // touch
           result.push(token);
         }, () => {});
         expectedAll[`${i}-${j}`] = {

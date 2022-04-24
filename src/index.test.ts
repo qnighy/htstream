@@ -38,6 +38,7 @@ describe("tokenize (white box testing)", () => {
     whiteBoxTest([..."a", "<a>", ..."b", "</a>", ..."c"]);
     whiteBoxTest(["<a ab=cd>"]);
     whiteBoxTest(["<a a=c>", ...">"]);
+    whiteBoxTest(["<a a=c d>", ...">"]);
     whiteBoxTest(["<a a=\"c\">", ...">"]);
     whiteBoxTest(["<a a=\"c>\" >", ...">"]);
     whiteBoxTest(["<a a='c'>", ...">"]);

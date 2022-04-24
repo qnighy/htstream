@@ -1,5 +1,5 @@
 import { maybeInCharacterReference } from "./charref";
-import { createRawDoctypeToken, createRawEndTagToken, createRawStartTagToken, createRawTextToken, RawToken } from "./token";
+import { createRawCommentToken, createRawDoctypeToken, createRawEndTagToken, createRawStartTagToken, createRawTextToken, RawToken } from "./token";
 
 export type {
   Token,
@@ -100,6 +100,38 @@ export class Tokenizer {
     }
     this._state = state;
     this._savedChunk = savedChunk;
+  }
+  public finish(addToken: (token: RawToken) => void) {
+    switch (this._state) {
+      case "data":
+      case "dataCarriageReturn":
+      case "tagOpen":
+      case "endTagOpen":
+      case "characterReference":
+      case "namedCharacterReference":
+        if (this._savedChunk) addToken(createRawTextToken(this._savedChunk));
+        break;
+      case "tagName":
+      case "beforeAttributeName":
+      case "attributeName":
+      case "beforeAttributeValue":
+      case "attributeValueDoubleQuoted":
+      case "attributeValueSingleQuoted":
+      case "attributeValueUnquoted":
+      case "bogusComment":
+        if (/^<!doctype/i.test(this._savedChunk)) {
+          addToken(createRawDoctypeToken(this._savedChunk));
+        } else if (this._savedChunk) {
+          addToken(createRawCommentToken(this._savedChunk));
+        }
+        break;
+      default: {
+        const state: never = this._state;
+        throw new Error(`Invalid state ${state}`);
+      }
+    }
+    this._state = "data";
+    this._savedChunk = "";
   }
   clone(): Tokenizer {
     return Object.create(Tokenizer.prototype, {

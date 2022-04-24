@@ -23,7 +23,7 @@ describe("tokenize (white box testing)", () => {
     whiteBoxTest([..."Hello, world!"]);
   });
 
-  xit("defers text parsing when ambiguous", () => {
+  it("defers text parsing when ambiguous", () => {
     whiteBoxTest([..."Hello,", "\r\n", ..."world!"]);
     whiteBoxTest([..."John ", "&amp;", ..." Mary"]);
     whiteBoxTest([..."Here we have foo ", "< ", ..."bar"]);
@@ -88,7 +88,7 @@ function whiteBoxTest(parts: string[]) {
         if (i + 1 === part.length) {
           if (part.startsWith("</")) {
             expected.push(EndTagToken.createRawToken(part));
-          } else if (part.startsWith("<")) {
+          } else if (/^<[a-zA-Z]/.test(part)) {
             expected.push(StartTagToken.createRawToken(part));
           } else {
             expected.push(TextToken.createRawToken(part));

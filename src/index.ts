@@ -1,3 +1,4 @@
+import { maybeInCharacterReference } from "./charref";
 import type { Token } from "./token";
 import { TextToken, StartTagToken, EndTagToken } from "./token";
 
@@ -26,8 +27,23 @@ export class Tokenizer {
     while (i < currentChunk.length) {
       switch (this._state) {
         case "data": {
+          if (this._savedChunk.length > 0) {
+            if (
+              (/^&#[0-9]/.test(this._savedChunk) && /^[0-9]+$/.test(currentChunk)) ||
+              (/^&#[Xx]/.test(this._savedChunk) && /^[0-9a-fA-F]+$/.test(currentChunk))
+            ) {
+              // Skip very long character references to avoid quadratic iteration
+              this._savedChunk += currentChunk;
+              currentChunk = "";
+              break;
+            }
+            // Reconsume the pending chunk (here we have i === 0)
+            currentChunk = this._savedChunk + currentChunk;
+            this._savedChunk = "";
+          }
+
           // Here we have i === 0
-          i = /^[^<&]*/.exec(currentChunk)![0].length;
+          i = /^[^<&\r]*/.exec(currentChunk)![0].length;
           while (i < currentChunk.length) {
             // Expand text token to include :
             // - known-invalid taglike (<)
@@ -40,9 +56,19 @@ export class Tokenizer {
                 break;
               }
             } else if (currentChunk[i] === "&") {
-              throw new Error("TODO");
+              if (maybeInCharacterReference(currentChunk.substring(i))) {
+                break;
+              } else {
+                i++;
+              }
+            } else if (currentChunk[i] === "\r") {
+              if (i + 1 < currentChunk.length) {
+                i++;
+              } else {
+                break;
+              }
             }
-            i += /^[^<&]*/.exec(currentChunk.substring(i))![0].length;
+            i += /^[^<&\r]*/.exec(currentChunk.substring(i))![0].length;
           }
           if (0 < i) {
             // savedChunk is empty here
@@ -55,7 +81,8 @@ export class Tokenizer {
               this._state = "tagOpen";
               i++;
             } else {
-              throw new Error("TODO");
+              this._savedChunk = currentChunk;
+              currentChunk = "";
             }
           }
           break;
@@ -77,7 +104,7 @@ export class Tokenizer {
           } else {
             // Fallback to plain <
             // We have i === 0 here
-            throw new Error("TODO");
+            this._state = "data";
           }
           break;
         }

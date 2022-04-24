@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
-import { Token, createRawTextToken, createRawStartTagToken, createRawEndTagToken, textValue, RawTextToken } from "./token";
+import { Token, createRawTextToken, createRawStartTagToken, createRawEndTagToken, textValue, RawTextToken, createRawDoctypeToken } from "./token";
 import { Tokenizer } from "./index";
 
 describe("tokenize", () => {
@@ -59,6 +59,10 @@ describe("tokenize (white box testing)", () => {
     whiteBoxTest(["<a a =\">\">"]);
     whiteBoxTest(["<a a/=\">", ..."\">"]);
   });
+
+  it("parses doctype", () => {
+    whiteBoxTest(["<!doctype html>"]);
+  });
 });
 
 function tokenizeAll(chunks: string[]): Token[] {
@@ -91,6 +95,8 @@ function whiteBoxTest(parts: string[]) {
             expected.push(createRawEndTagToken(part));
           } else if (/^<[a-zA-Z]/.test(part)) {
             expected.push(createRawStartTagToken(part));
+          } else if (/^<!DOCTYPE/i.test(part)) {
+            expected.push(createRawDoctypeToken(part));
           } else {
             expected.push(createRawTextToken(part));
           }

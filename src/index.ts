@@ -1,5 +1,5 @@
 import { maybeInCharacterReference } from "./charref";
-import { createRawEndTagToken, createRawStartTagToken, createRawTextToken, RawToken } from "./token";
+import { createRawDoctypeToken, createRawEndTagToken, createRawStartTagToken, createRawTextToken, RawToken } from "./token";
 
 export type {
   Token,
@@ -46,7 +46,23 @@ export class Tokenizer {
           currentChunk = currentChunk.substring(i);
           savedChunk = "";
           i = 0;
-          addToken(raw.startsWith("</") ? createRawEndTagToken(raw) : createRawStartTagToken(raw));
+          if (/^<[a-zA-Z]/.test(raw)) {
+            addToken(createRawStartTagToken(raw));
+          } else if (raw.startsWith("</")) {
+            addToken(createRawEndTagToken(raw));
+          } else if (raw.startsWith("<!")) {
+            if (raw.startsWith("<!--")) {
+              throw new Error("TODO");
+            } else if (/^<!DOCTYPE/i.test(raw)) {
+              addToken(createRawDoctypeToken(raw));
+            } else if (raw.startsWith("<![CDATA[")) {
+              throw new Error("TODO");
+            } else {
+              throw new Error("TODO");
+            }
+          } else {
+            throw new Error("TODO");
+          }
           state = "data";
           continue outer;
         }
@@ -114,6 +130,42 @@ type State =
   | "attributeValueDoubleQuoted"
   | "attributeValueSingleQuoted"
   | "attributeValueUnquoted"
+  // One of:
+  // - "bogus comment"
+  // - "markup declaration open"
+  // - "comment start"
+  // - "comment start dash"
+  // - "comment"
+  // - "comment less-than sign"
+  // - "comment less-than sign bang"
+  // - "comment less-than sign bang dash"
+  // - "comment less-than sign bang dash dash"
+  // - "comment end dash"
+  // - "comment end"
+  // - "comment end bang"
+  // - "DOCTYPE"
+  // - "before DOCTYPE name"
+  // - "DOCTYPE name"
+  // - "after DOCTYPE name"
+  // - "after DOCTYPE public keyword"
+  // - "before DOCTYPE public identifier"
+  // - "DOCTYPE public identifier double-quoted"
+  // - "DOCTYPE public identifier single-quoted"
+  // - "after DOCTYPE public identifier"
+  // - "between DOCTYPE public and system identifiers"
+  // - "after DOCTYPE system keyword"
+  // - "before DOCTYPE system identifier"
+  // - "DOCTYPE system identifier double-quoted"
+  // - "DOCTYPE system identifier single-quoted"
+  // - "after DOCTYPE system identifier"
+  // - "bogus DOCTYPE"
+  // - "CDATA section"
+  // - "CDATA section bracket"
+  // - "CDATA section end"
+  //
+  // Comments and CDATAs have different conditions for termination.
+  // This is handled specially in the main tokenization loop.
+  | "bogusComment"
   // Only if the return state is "data" or "RCDATA".
   | "characterReference"
   | "namedCharacterReference";
@@ -147,7 +199,7 @@ const transitionTable: Record<State, TransitionData> = {
       // "</" as in "</a>"
       ["/", 1, "endTagOpen"],
       // "<!" as in "<!-->", "<!doctype>", "<![CDATA[]]>"
-      ["!", 1, "TODO"],
+      ["!", 1, "bogusComment"],
       // "<?" as in "<?xml?>" (bogus comment)
       ["?", 1, "TODO"],
       // Literal <
@@ -251,6 +303,15 @@ const transitionTable: Record<State, TransitionData> = {
       [/[a-zA-Z]/, 1, "namedCharacterReference"],
       ["#", 1, "TODO"],
       [null, 1, "TODO"],
+    ],
+  },
+  // "<!" as in "<!-->", "<!doctype>", "<![CDATA[]]>"
+  bogusComment: {
+    rules: [
+      // Comments and CDATAs have different conditions for termination.
+      // This is handled specially in the main tokenization loop.
+      [">", 1, "emitTag"],
+      [null, 1, "bogusComment"],
     ],
   },
   // "&a" as in "&amp;"

@@ -6,14 +6,18 @@ export type Token =
   | StartTagToken
   | RawStartTagToken
   | EndTagToken
-  | RawEndTagToken;
+  | RawEndTagToken
+  | DoctypeToken
+  | RawDoctypeToken;
 export type RawToken =
   | RawTextToken
   | RawStartTagToken
-  | RawEndTagToken;
+  | RawEndTagToken
+  | RawDoctypeToken;
 export type TextTokenLike = TextToken | RawTextToken;
 export type StartTagTokenLike = StartTagToken | RawStartTagToken;
 export type EndTagTokenLike = EndTagToken | RawEndTagToken;
+export type DoctypeTokenLike = DoctypeToken | RawDoctypeToken;
 
 export type TextToken = {
   type: "TextToken";
@@ -48,6 +52,15 @@ export type RawEndTagToken = {
   raw: string;
 };
 
+export type DoctypeToken = {
+  type: "DoctypeToken";
+};
+
+export type RawDoctypeToken = {
+  type: "RawDoctypeToken";
+  raw: string;
+};
+
 export function isTextTokenLike(token: Token): token is TextTokenLike {
   return token.type === "TextToken" || token.type === "RawTextToken";
 }
@@ -58,6 +71,10 @@ export function isStartTagTokenLike(token: Token): token is StartTagTokenLike {
 
 export function isEndTagTokenLike(token: Token): token is EndTagTokenLike {
   return token.type === "EndTagToken" || token.type === "RawEndTagToken";
+}
+
+export function isDoctypeTokenLike(token: Token): token is DoctypeTokenLike {
+  return token.type === "DoctypeToken" || token.type === "RawDoctypeToken";
 }
 
 export function createTextToken(value: string): TextToken {
@@ -102,6 +119,19 @@ export function createRawEndTagToken(raw: string): RawEndTagToken {
   return {
     type: "RawEndTagToken",
     tagName,
+    raw,
+  };
+}
+
+export function createDoctypeToken(): DoctypeToken {
+  return {
+    type: "DoctypeToken",
+  };
+}
+
+export function createRawDoctypeToken(raw: string): RawDoctypeToken {
+  return {
+    type: "RawDoctypeToken",
     raw,
   };
 }

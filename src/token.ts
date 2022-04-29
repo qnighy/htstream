@@ -194,6 +194,55 @@ export function parseToken(token: Token): ParsedToken<Token> {
   }
 }
 
+const escapeMap = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  "'": "&#39;",
+  '"': "&quot;",
+};
+
+export function appendToken(token: Token, base: string = ""): string {
+  let s = base;
+  switch (token.type) {
+    case "TextToken":
+      s += token.value.replace(/[&<>]/g, (c) => escapeMap[c as "&" | "<" | ">"]);
+      break;
+    case "RawTextToken":
+      s += token.raw;
+      break;
+    case "StartTagToken":
+      s += `<${token.tagName}>`;
+      break;
+    case "RawStartTagToken":
+      s += token.raw;
+      break;
+    case "EndTagToken":
+      s += `</${token.tagName}>`;
+      break;
+    case "RawEndTagToken":
+      s += token.raw;
+      break;
+    case "DoctypeToken":
+      s += "<!doctype html>";
+      break;
+    case "RawDoctypeToken":
+      s += token.raw;
+      break;
+    case "CommentToken":
+      s += `<!--${token.value}-->`;
+      break;
+    case "RawCommentToken":
+      s += token.raw;
+      break;
+    default: {
+      const _token: never = token;
+      throw new Error(`TODO: ${(_token as any).type}`);
+    }
+  }
+  return s;
+}
+
 export function textValue(token: TextTokenLike): string {
   if (token.type === "RawTextToken") {
     return token.raw.replace(

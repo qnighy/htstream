@@ -2869,6 +2869,7 @@ __metadata:
     "@babel/preset-env": ^7.16.11
     "@babel/preset-typescript": ^7.16.7
     "@jest/globals": ^27.5.1
+    "@jest/types": ^27.5.1
     "@types/glob": ^7.2.0
     babel-jest: ^27.5.1
     glob: ^8.0.1

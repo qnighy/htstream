@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
-import { Token, createRawTextToken, createRawStartTagToken, createRawEndTagToken, textValue, RawTextToken, createRawDoctypeToken, RawToken, createRawCommentToken } from "./token";
+import { Token, createRawTextToken, createRawStartTagToken, createRawEndTagToken, textValue, RawTextToken, createRawDoctypeToken, RawToken, createRawCommentToken, createGarbageToken } from "./token";
 import { Tokenizer } from "./index";
 
 describe("tokenize", () => {
@@ -78,15 +78,15 @@ describe("tokenize (white box testing)", () => {
     whiteBoxTest([createRawTextToken("</")]);
   });
 
-  it("parses incomplete tags as comments", () => {
-    whiteBoxTest([createRawCommentToken("<a")]);
-    whiteBoxTest([createRawCommentToken("<a ")]);
-    whiteBoxTest([createRawCommentToken("<a a")]);
-    whiteBoxTest([createRawCommentToken("<a a=")]);
-    whiteBoxTest([createRawCommentToken("<a a=\"")]);
-    whiteBoxTest([createRawCommentToken("<a a='")]);
-    whiteBoxTest([createRawCommentToken("<a a=a")]);
-    whiteBoxTest([createRawCommentToken("</a")]);
+  it("parses incomplete tags as garbages", () => {
+    whiteBoxTest([createGarbageToken("<a")]);
+    whiteBoxTest([createGarbageToken("<a ")]);
+    whiteBoxTest([createGarbageToken("<a a")]);
+    whiteBoxTest([createGarbageToken("<a a=")]);
+    whiteBoxTest([createGarbageToken("<a a=\"")]);
+    whiteBoxTest([createGarbageToken("<a a='")]);
+    whiteBoxTest([createGarbageToken("<a a=a")]);
+    whiteBoxTest([createGarbageToken("</a")]);
   });
 
   it("parses incomplete doctypes", () => {

@@ -3,7 +3,7 @@ import glob from "glob";
 import { describe, expect, it } from "@jest/globals";
 import { Global as JestGlobal } from "@jest/types";
 import { Tokenizer } from ".";
-import { appendToken, parseToken } from "./token";
+import { appendToken, createTextToken, parseToken } from "./token";
 
 const updateSnapshots = process.env.UPDATE_SNAPSHOTS === "true";
 
@@ -47,11 +47,11 @@ for (const testcase of testcases) {
       for(let i = 0; i < text.length; i += chunkSize) {
         const chunk = text.substring(i, i + chunkSize);
         tokenizer.addChunk(chunk, (token) => {
-          result = appendToken(parseToken(token), result);
+          result = appendToken(parseToken(token) ?? createTextToken(""), result);
         });
       }
       tokenizer.finish((token) => {
-        result = appendToken(parseToken(token), result);
+        result = appendToken(parseToken(token) ?? createTextToken(""), result);
       });
       if (result !== expected && updateSnapshots) {
         fs.writeFileSync(expectedPath, result, "utf-8");

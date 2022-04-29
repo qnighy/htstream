@@ -10,13 +10,15 @@ export type Token =
   | DoctypeToken
   | RawDoctypeToken
   | CommentToken
-  | RawCommentToken;
+  | RawCommentToken
+  | GarbageToken;
 export type RawToken =
   | RawTextToken
   | RawStartTagToken
   | RawEndTagToken
   | RawDoctypeToken
-  | RawCommentToken;
+  | RawCommentToken
+  | GarbageToken;
 export type TextTokenLike = TextToken | RawTextToken;
 export type StartTagTokenLike = StartTagToken | RawStartTagToken;
 export type EndTagTokenLike = EndTagToken | RawEndTagToken;
@@ -29,6 +31,7 @@ export type ParsedToken<T extends Token> =
   T extends RawEndTagToken ? EndTagToken :
   T extends RawDoctypeToken ? DoctypeToken :
   T extends RawCommentToken ? CommentToken :
+  T extends GarbageToken ? null :
   T;
 
 export type TextToken = {
@@ -80,6 +83,11 @@ export type CommentToken = {
 
 export type RawCommentToken = {
   type: "RawCommentToken";
+  raw: string;
+};
+
+export type GarbageToken = {
+  type: "GarbageToken";
   raw: string;
 };
 
@@ -176,6 +184,13 @@ export function createRawCommentToken(raw: string): RawCommentToken {
   };
 }
 
+export function createGarbageToken(raw: string): GarbageToken {
+  return {
+    type: "GarbageToken",
+    raw,
+  };
+}
+
 export function parseToken<T extends Token>(token: T): ParsedToken<T>;
 export function parseToken(token: Token): ParsedToken<Token> {
   switch (token.type) {
@@ -189,6 +204,8 @@ export function parseToken(token: Token): ParsedToken<Token> {
       return createDoctypeToken();
     case "RawCommentToken":
       throw new Error(`TODO: ${token.type}`);
+    case "GarbageToken":
+      return null;
     default:
       return token;
   }
@@ -233,6 +250,9 @@ export function appendToken(token: Token, base: string = ""): string {
       s += `<!--${token.value}-->`;
       break;
     case "RawCommentToken":
+      s += token.raw;
+      break;
+    case "GarbageToken":
       s += token.raw;
       break;
     default: {

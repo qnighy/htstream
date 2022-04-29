@@ -1,5 +1,5 @@
 import { maybeInCharacterReference } from "./charref";
-import { createRawCommentToken, createRawDoctypeToken, createRawEndTagToken, createRawStartTagToken, createRawTextToken, RawToken } from "./token";
+import { createGarbageToken, createRawCommentToken, createRawDoctypeToken, createRawEndTagToken, createRawStartTagToken, createRawTextToken, RawToken } from "./token";
 
 export type {
   Token,
@@ -121,6 +121,8 @@ export class Tokenizer {
       case "attributeValueDoubleQuoted":
       case "attributeValueSingleQuoted":
       case "attributeValueUnquoted":
+        addToken(createGarbageToken(this._savedChunk));
+        break;
       case "bogusComment":
         if (/^<!doctype/i.test(this._savedChunk)) {
           addToken(createRawDoctypeToken(this._savedChunk));

@@ -109,6 +109,9 @@ export class Tokenizer {
       case "endTagOpen":
       case "characterReference":
       case "namedCharacterReference":
+      case "numericCharacterReference":
+      case "hexadecimalCharacterReference":
+      case "decimalCharacterReference":
         if (this._savedChunk) addToken(createRawTextToken(this._savedChunk));
         break;
       case "tagName":
@@ -199,7 +202,12 @@ type State =
   | "bogusComment"
   // Only if the return state is "data" or "RCDATA".
   | "characterReference"
-  | "namedCharacterReference";
+  | "namedCharacterReference"
+  // Includes the "decimal character reference start" state
+  | "numericCharacterReference"
+  // Either "hexadecimal character reference start" or "hexadecimal character reference"
+  | "hexadecimalCharacterReference"
+  | "decimalCharacterReference";
 
 type TransitionData = {
   selfSkip?: RegExp;
@@ -327,15 +335,6 @@ const transitionTable: Record<State, TransitionData> = {
       [null, 1, "attributeValueUnquoted"],
     ],
   },
-  // "&" as in "&amp;"
-  characterReference: {
-    rules: [
-      // "&a" as in "&amp;"
-      [/[a-zA-Z]/, 1, "namedCharacterReference"],
-      ["#", 1, "TODO"],
-      [null, 1, "TODO"],
-    ],
-  },
   // "<!" as in "<!-->", "<!doctype>", "<![CDATA[]]>"
   bogusComment: {
     rules: [
@@ -345,12 +344,48 @@ const transitionTable: Record<State, TransitionData> = {
       [null, 1, "bogusComment"],
     ],
   },
+  // "&" as in "&amp;"
+  characterReference: {
+    rules: [
+      // "&a" as in "&amp;"
+      [/[a-zA-Z]/, 1, "namedCharacterReference"],
+      // "&#" as in "&#38;", "&#x26;"
+      ["#", 1, "numericCharacterReference"],
+      [null, 1, "TODO"],
+    ],
+  },
   // "&a" as in "&amp;"
   // TODO: handle known-invalid cases
   namedCharacterReference: {
     rules: [
       [/[a-zA-Z0-9]/, 1, "namedCharacterReference"],
       // "&amp;" or "&amp" as in "&amp ". Consumable in any case.
+      [null, 0, "data"],
+    ],
+  },
+  // "&#" as in "&#38;", "&#x26;"
+  numericCharacterReference: {
+    rules: [
+      // "&#x" as in "&#x26"
+      [/[xX]/, 1, "hexadecimalCharacterReference"],
+      // "&#3" as in "&#38;"
+      [/[0-9]/, 1, "decimalCharacterReference"],
+      [null, 0, "TODO"],
+    ],
+  },
+  // "&#x" or "&#x2" as in "&#x26;"
+  hexadecimalCharacterReference: {
+    rules: [
+      [/[0-9a-fA-F]/, 1, "hexadecimalCharacterReference"],
+      // "&#x", "&#x2" or "&#x26" as in "&#x26;". Consumable in any case.
+      [null, 0, "data"],
+    ],
+  },
+  // "&#3" as in "&#38;"
+  decimalCharacterReference: {
+    rules: [
+      [/[0-9]/, 1, "decimalCharacterReference"],
+      // "&#3" or "&#38" as in "&#38;". Consumable in any case.
       [null, 0, "data"],
     ],
   },

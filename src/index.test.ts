@@ -27,6 +27,8 @@ describe("tokenize (white box testing)", () => {
     whiteBoxTest([..."Hello,", "\r\n", ..."world!"]);
     whiteBoxTest([..."John ", "&amp;", ..." Mary"]);
     whiteBoxTest([..."Here we have foo ", "< ", ..."bar"]);
+    whiteBoxTest(["A", "&#38;", "B"]);
+    whiteBoxTest(["A", "&#x26;", "B"]);
   });
 
   it("parses tags", () => {

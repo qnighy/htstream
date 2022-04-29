@@ -213,9 +213,9 @@ export function parseToken(token: Token): ParsedToken<Token> {
 
 const escapeMap = {
   "&": "&amp;",
+  "\xA0": "&nbsp;",
   "<": "&lt;",
   ">": "&gt;",
-  "'": "&#39;",
   '"': "&quot;",
 };
 
@@ -223,7 +223,7 @@ export function appendToken(token: Token, base: string = ""): string {
   let s = base;
   switch (token.type) {
     case "TextToken":
-      s += token.value.replace(/[&<>]/g, (c) => escapeMap[c as "&" | "<" | ">"]);
+      s += token.value.replace(/[&\xA0<>]/g, (c) => escapeMap[c as "&" | "\xA0" | "<" | ">"]);
       break;
     case "RawTextToken":
       s += token.raw;

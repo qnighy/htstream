@@ -1,5 +1,5 @@
-import { describe, expect, it } from "@jest/globals";
-import { normalizeTagName, createRawStartTagToken, textValue, createRawTextToken, createTextToken, createStartTagToken, createEndTagToken, createRawEndTagToken } from "./token";
+import { describe, expect, it, xit } from "@jest/globals";
+import { normalizeTagName, createRawStartTagToken, textValue, createRawTextToken, createTextToken, createStartTagToken, createEndTagToken, createRawEndTagToken, parseToken, createRawDoctypeToken, createRawCommentToken } from "./token";
 
 describe("createStartTagToken", () => {
   it("normalizes the tag name", () => {
@@ -42,6 +42,37 @@ describe("createRawEndTagToken", () => {
     expect(createRawEndTagToken("</FOO>").tagName).toBe("foo");
     expect(createRawEndTagToken("</F\xD2\xD3>").tagName).toBe("f\xD2\xD3");
     expect(createRawEndTagToken("</F\0O>").tagName).toBe("f\uFFFDo");
+  });
+});
+
+describe("parseToken", () => {
+  it("parses text tokens", () => {
+    expect(parseToken(createRawTextToken("foo")).type).toBe("TextToken");
+    expect(parseToken(createRawTextToken("foo")).value).toBe("foo");
+    expect(parseToken(createRawTextToken("a < b")).value).toBe("a < b");
+    expect(parseToken(createRawTextToken("a &lt; b")).value).toBe("a < b");
+  });
+
+  it("parses start tag tokens", () => {
+    expect(parseToken(createRawStartTagToken("<foo>")).type).toBe("StartTagToken");
+    expect(parseToken(createRawStartTagToken("<foo>")).tagName).toBe("foo");
+    expect(parseToken(createRawStartTagToken("<foo-bar baz=baz>")).tagName).toBe("foo-bar");
+    expect(parseToken(createRawStartTagToken("<foo-bar/>")).tagName).toBe("foo-bar");
+  });
+
+  it("parses end tag tokens", () => {
+    expect(parseToken(createRawEndTagToken("</foo>")).type).toBe("EndTagToken");
+    expect(parseToken(createRawEndTagToken("</foo>")).tagName).toBe("foo");
+    expect(parseToken(createRawEndTagToken("</foo-bar baz=baz>")).tagName).toBe("foo-bar");
+    expect(parseToken(createRawEndTagToken("</foo-bar/>")).tagName).toBe("foo-bar");
+  });
+
+  it("parses doctype tokens", () => {
+    expect(parseToken(createRawDoctypeToken("<!doctype html>")).type).toBe("DoctypeToken");
+  });
+
+  xit("parses comment tokens", () => {
+    expect(parseToken(createRawCommentToken("<!-- -->")).type).toBe("CommentToken");
   });
 });
 

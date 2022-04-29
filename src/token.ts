@@ -23,6 +23,14 @@ export type EndTagTokenLike = EndTagToken | RawEndTagToken;
 export type DoctypeTokenLike = DoctypeToken | RawDoctypeToken;
 export type CommentTokenLike = CommentToken | RawCommentToken;
 
+export type ParsedToken<T extends Token> =
+  T extends RawTextToken ? TextToken :
+  T extends RawStartTagToken ? StartTagToken :
+  T extends RawEndTagToken ? EndTagToken :
+  T extends RawDoctypeToken ? DoctypeToken :
+  T extends RawCommentToken ? CommentToken :
+  T;
+
 export type TextToken = {
   type: "TextToken";
   value: string;
@@ -166,6 +174,24 @@ export function createRawCommentToken(raw: string): RawCommentToken {
     type: "RawCommentToken",
     raw,
   };
+}
+
+export function parseToken<T extends Token>(token: T): ParsedToken<T>;
+export function parseToken(token: Token): ParsedToken<Token> {
+  switch (token.type) {
+    case "RawTextToken":
+      return createTextToken(textValue(token));
+    case "RawStartTagToken":
+      return createStartTagToken(token.tagName);
+    case "RawEndTagToken":
+      return createEndTagToken(token.tagName);
+    case "RawDoctypeToken":
+      return createDoctypeToken();
+    case "RawCommentToken":
+      throw new Error(`TODO: ${token.type}`);
+    default:
+      return token;
+  }
 }
 
 export function textValue(token: TextTokenLike): string {

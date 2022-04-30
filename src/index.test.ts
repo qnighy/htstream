@@ -18,83 +18,83 @@ describe("tokenize", () => {
 });
 
 describe("tokenize (white box testing)", () => {
-  it("parses text char-by-char", () => {
-    whiteBoxTest([]);
-    whiteBoxTest([..."Hello, world!"]);
+  describe("char-by-char text parsing", () => {
+    defineWhiteBoxTest([]);
+    defineWhiteBoxTest([..."Hello, world!"]);
   });
 
-  it("defers text parsing when ambiguous", () => {
-    whiteBoxTest([..."Hello,", "\r\n", ..."world!"]);
-    whiteBoxTest([..."John ", "&amp;", ..." Mary"]);
-    whiteBoxTest([..."Here we have foo ", "< ", ..."bar"]);
-    whiteBoxTest(["A", "&#38;", "B"]);
-    whiteBoxTest(["A", "&#x26;", "B"]);
+  describe("text parsing when ambiguous", () => {
+    defineWhiteBoxTest([..."Hello,", "\r\n", ..."world!"]);
+    defineWhiteBoxTest([..."John ", "&amp;", ..." Mary"]);
+    defineWhiteBoxTest([..."Here we have foo ", "< ", ..."bar"]);
+    defineWhiteBoxTest(["A", "&#38;", "B"]);
+    defineWhiteBoxTest(["A", "&#x26;", "B"]);
   });
 
-  it("parses tags", () => {
-    whiteBoxTest(["<a>", ..."Hi", "</a>"]);
-    whiteBoxTest(["<div>", "</div>"]);
-    whiteBoxTest(["<br/>"]);
-    whiteBoxTest(["<br >"]);
-    whiteBoxTest(["<a/b>"]);
-    whiteBoxTest([..."a", "<a>", ..."b", "</a>", ..."c"]);
-    whiteBoxTest(["<a ab=cd>"]);
-    whiteBoxTest(["<a a=c>", ...">"]);
-    whiteBoxTest(["<a a=c d>", ...">"]);
-    whiteBoxTest(["<a a=\"c\">", ...">"]);
-    whiteBoxTest(["<a a=\"c>\" >", ...">"]);
-    whiteBoxTest(["<a a='c'>", ...">"]);
-    whiteBoxTest(["<a a='c>'>", ...""]);
-    whiteBoxTest(["<a a>", ..."=c>"]);
-    whiteBoxTest(["<a ==>", ...">"]);
-    whiteBoxTest(["<a =>", ...">"]);
-    whiteBoxTest(["<a ==\">\">", ...""]);
-    whiteBoxTest(["<a =\">", ..."\">"]);
-    whiteBoxTest(["<a =='>'>", ...""]);
-    whiteBoxTest(["<a ='>", ..."'>"]);
-    whiteBoxTest(["<a a b=c>"]);
-    whiteBoxTest(["<a a/b=c>"]);
-    whiteBoxTest(["<a a/b=>"]);
-    whiteBoxTest(["<a a/b>"]);
-    whiteBoxTest(["<a a=\">\">"]);
-    whiteBoxTest(["<a a= \">\">"]);
-    whiteBoxTest(["<a a =\">\">"]);
-    whiteBoxTest(["<a a/=\">", ..."\">"]);
+  describe("tags", () => {
+    defineWhiteBoxTest(["<a>", ..."Hi", "</a>"]);
+    defineWhiteBoxTest(["<div>", "</div>"]);
+    defineWhiteBoxTest(["<br/>"]);
+    defineWhiteBoxTest(["<br >"]);
+    defineWhiteBoxTest(["<a/b>"]);
+    defineWhiteBoxTest([..."a", "<a>", ..."b", "</a>", ..."c"]);
+    defineWhiteBoxTest(["<a ab=cd>"]);
+    defineWhiteBoxTest(["<a a=c>", ...">"]);
+    defineWhiteBoxTest(["<a a=c d>", ...">"]);
+    defineWhiteBoxTest(["<a a=\"c\">", ...">"]);
+    defineWhiteBoxTest(["<a a=\"c>\" >", ...">"]);
+    defineWhiteBoxTest(["<a a='c'>", ...">"]);
+    defineWhiteBoxTest(["<a a='c>'>", ...""]);
+    defineWhiteBoxTest(["<a a>", ..."=c>"]);
+    defineWhiteBoxTest(["<a ==>", ...">"]);
+    defineWhiteBoxTest(["<a =>", ...">"]);
+    defineWhiteBoxTest(["<a ==\">\">", ...""]);
+    defineWhiteBoxTest(["<a =\">", ..."\">"]);
+    defineWhiteBoxTest(["<a =='>'>", ...""]);
+    defineWhiteBoxTest(["<a ='>", ..."'>"]);
+    defineWhiteBoxTest(["<a a b=c>"]);
+    defineWhiteBoxTest(["<a a/b=c>"]);
+    defineWhiteBoxTest(["<a a/b=>"]);
+    defineWhiteBoxTest(["<a a/b>"]);
+    defineWhiteBoxTest(["<a a=\">\">"]);
+    defineWhiteBoxTest(["<a a= \">\">"]);
+    defineWhiteBoxTest(["<a a =\">\">"]);
+    defineWhiteBoxTest(["<a a/=\">", ..."\">"]);
   });
 
-  it("parses doctype", () => {
-    whiteBoxTest(["<!doctype html>"]);
+  describe("doctypes", () => {
+    defineWhiteBoxTest(["<!doctype html>"]);
   });
 
-  it("parses texts ending with ambiguous parts", () => {
-    whiteBoxTest(["a", "\r"]);
-    whiteBoxTest(["a", "&amp"]);
-    whiteBoxTest(["a", "&am"]);
-    whiteBoxTest(["a", "&"]);
+  describe("texts ending with ambiguous parts", () => {
+    defineWhiteBoxTest(["a", "\r"]);
+    defineWhiteBoxTest(["a", "&amp"]);
+    defineWhiteBoxTest(["a", "&am"]);
+    defineWhiteBoxTest(["a", "&"]);
   });
 
-  it("parses short incomplete tags as texts", () => {
-    whiteBoxTest(["<"]);
-    whiteBoxTest([createRawTextToken("</")]);
+  describe("short incomplete tags", () => {
+    defineWhiteBoxTest(["<"]);
+    defineWhiteBoxTest([createRawTextToken("</")]);
   });
 
-  it("parses incomplete tags as garbages", () => {
-    whiteBoxTest([createGarbageToken("<a")]);
-    whiteBoxTest([createGarbageToken("<a ")]);
-    whiteBoxTest([createGarbageToken("<a a")]);
-    whiteBoxTest([createGarbageToken("<a a=")]);
-    whiteBoxTest([createGarbageToken("<a a=\"")]);
-    whiteBoxTest([createGarbageToken("<a a='")]);
-    whiteBoxTest([createGarbageToken("<a a=a")]);
-    whiteBoxTest([createGarbageToken("</a")]);
+  describe("long incomplete tags", () => {
+    defineWhiteBoxTest([createGarbageToken("<a")]);
+    defineWhiteBoxTest([createGarbageToken("<a ")]);
+    defineWhiteBoxTest([createGarbageToken("<a a")]);
+    defineWhiteBoxTest([createGarbageToken("<a a=")]);
+    defineWhiteBoxTest([createGarbageToken("<a a=\"")]);
+    defineWhiteBoxTest([createGarbageToken("<a a='")]);
+    defineWhiteBoxTest([createGarbageToken("<a a=a")]);
+    defineWhiteBoxTest([createGarbageToken("</a")]);
   });
 
-  it("parses incomplete doctypes", () => {
-    whiteBoxTest([createRawDoctypeToken("<!doctype html")]);
+  describe("incomplete doctypes", () => {
+    defineWhiteBoxTest([createRawDoctypeToken("<!doctype html")]);
   });
 
-  it("parses incomplete comments", () => {
-    whiteBoxTest([createRawCommentToken("<!-- c")]);
+  describe("incomplete comments", () => {
+    defineWhiteBoxTest([createRawCommentToken("<!-- c")]);
   });
 });
 
@@ -107,6 +107,13 @@ function tokenizeAll(chunks: string[]): Token[] {
     });
   }
   return tokens;
+}
+
+function defineWhiteBoxTest(parts: (string | RawToken)[]) {
+  const text = parts.map((part) => typeof part === "string" ? part : part.raw).join("");
+  it(`parses ${JSON.stringify(text)}`, () => {
+    whiteBoxTest(parts);
+  });
 }
 
 function whiteBoxTest(parts: (string | RawToken)[]) {

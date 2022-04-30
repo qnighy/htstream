@@ -1,5 +1,5 @@
 import { describe, expect, it, xit } from "@jest/globals";
-import { normalizeTagName, createRawStartTagToken, textValue, createRawTextToken, createTextToken, createStartTagToken, createEndTagToken, createRawEndTagToken, parseToken, createRawDoctypeToken, createRawCommentToken } from "./token";
+import { normalizeTagName, createRawStartTagToken, textValue, createRawTextToken, createTextToken, createStartTagToken, createEndTagToken, createRawEndTagToken, parseToken, createRawDoctypeToken, createRawCommentToken, commentValue, createCommentToken } from "./token";
 
 describe("createStartTagToken", () => {
   it("normalizes the tag name", () => {
@@ -119,6 +119,213 @@ describe("textValue", () => {
       expect(textValue(createRawTextToken("a\r\n"))).toBe("a\n");
       expect(textValue(createRawTextToken("a\r"))).toBe("a\n");
       expect(textValue(createRawTextToken("a\n\n\nb\n\n\rc\n\r\nd\n\r\re\r\n\nf\r\n\rg\r\r\nh\r\r\ri"))).toBe("a\n\n\nb\n\n\nc\n\nd\n\n\ne\n\nf\n\ng\n\nh\n\n\ni");
+    });
+  });
+});
+
+describe("commentValue", () => {
+  describe("for CommentToken", () => {
+    function testCase(input: string, expected: string) {
+      it(`parses ${JSON.stringify(input)}`, () => {
+        expect(commentValue(createCommentToken(input))).toBe(expected);
+      });
+    }
+    describe("roundtrip", () => {
+      testCase("Hello, world!", "Hello, world!");
+      testCase("a < b", "a < b");
+      testCase("<a>&amp;</a>", "<a>&amp;</a>");
+    });
+  });
+
+  describe("for RawCommentToken", () => {
+    function testCase(input: string, expected: string) {
+      it(`parses ${JSON.stringify(input)}`, () => {
+        expect(commentValue(createRawCommentToken(input))).toBe(expected);
+      });
+    }
+    describe("correct comments", () => {
+      testCase("<!---->", "");
+      testCase("<!--a-->", "a");
+      testCase("<!-- foo -->", " foo ");
+      testCase("<!-- <a> -->", " <a> ");
+      testCase("<!-- ---- -->", " ---- ");
+      testCase("<!----->", "-");
+      testCase("<!------>", "--");
+      testCase("<!------->", "---");
+      testCase("<!---a-->", "-a");
+      testCase("<!----a-->", "--a");
+      testCase("<!--a--->", "a-");
+      testCase("<!---a--->", "-a-");
+      testCase("<!----a--->", "--a-");
+      testCase("<!--a---->", "a--");
+      testCase("<!---a---->", "-a--");
+      testCase("<!----a---->", "--a--");
+      testCase("<!--<!-->", "<!");
+      testCase("<!--a<!-->", "a<!");
+      testCase("<!--!>-->", "!>");
+      testCase("<!---!>-->", "-!>");
+    });
+
+    describe("comments with invalid contents", () => {
+      testCase("<!--<!---->", "<!--");
+      testCase("<!-- <!-- -->", " <!-- ");
+      testCase("<!--<!--->", "<!-");
+    });
+
+    describe("abruptly closed comments", () => {
+      testCase("<!-->", "");
+      testCase("<!--->", "");
+    });
+
+    describe("incorrectly closed comments", () => {
+      testCase("<!----!>", "");
+      testCase("<!--a--!>", "a");
+      testCase("<!-- foo --!>", " foo ");
+      testCase("<!-- <a> --!>", " <a> ");
+      testCase("<!-- ---- --!>", " ---- ");
+      testCase("<!-----!>", "-");
+      testCase("<!------!>", "--");
+      testCase("<!-------!>", "---");
+      testCase("<!---a--!>", "-a");
+      testCase("<!----a--!>", "--a");
+      testCase("<!--a---!>", "a-");
+      testCase("<!---a---!>", "-a-");
+      testCase("<!----a---!>", "--a-");
+      testCase("<!--a----!>", "a--");
+      testCase("<!---a----!>", "-a--");
+      testCase("<!----a----!>", "--a--");
+      testCase("<!--<!--!>", "<!");
+      testCase("<!--a<!--!>", "a<!");
+      testCase("<!--!>--!>", "!>");
+      testCase("<!---!>--!>", "-!>");
+    });
+
+    describe("correctly closable partial comments", () => {
+      testCase("<!----", "");
+      testCase("<!--a--", "a");
+      testCase("<!-- foo --", " foo ");
+      testCase("<!-- <a> --", " <a> ");
+      testCase("<!-- ---- --", " ---- ");
+      testCase("<!-----", "-");
+      testCase("<!------", "--");
+      testCase("<!-------", "---");
+      testCase("<!---a--", "-a");
+      testCase("<!----a--", "--a");
+      testCase("<!--a---", "a-");
+      testCase("<!---a---", "-a-");
+      testCase("<!----a---", "--a-");
+      testCase("<!--a----", "a--");
+      testCase("<!---a----", "-a--");
+      testCase("<!----a----", "--a--");
+      testCase("<!--<!--", "<!");
+      testCase("<!--a<!--", "a<!");
+      testCase("<!--!>--", "!>");
+      testCase("<!---!>--", "-!>");
+
+      testCase("<!---", "");
+      testCase("<!--a-", "a");
+      testCase("<!-- foo -", " foo ");
+      testCase("<!-- <a> -", " <a> ");
+      testCase("<!-- ---- -", " ---- ");
+      // testCase("<!----", "");
+      // testCase("<!-----", "-");
+      // testCase("<!------", "--");
+      testCase("<!---a-", "-a");
+      testCase("<!----a-", "--a");
+      // testCase("<!--a--", "a");
+      // testCase("<!---a--", "-a");
+      // testCase("<!----a--", "--a");
+      // testCase("<!--a---", "a-");
+      // testCase("<!---a---", "-a-");
+      // testCase("<!----a---", "--a-");
+      testCase("<!--<!-", "<!");
+      testCase("<!--a<!-", "a<!");
+      testCase("<!--!>-", "!>");
+      testCase("<!---!>-", "-!>");
+
+      testCase("<!--", "");
+      testCase("<!--a", "a");
+      testCase("<!-- foo ", " foo ");
+      testCase("<!-- <a> ", " <a> ");
+      testCase("<!-- ---- ", " ---- ");
+      // testCase("<!---", "");
+      // testCase("<!----", "");
+      // testCase("<!-----", "-");
+      testCase("<!---a", "-a");
+      testCase("<!----a", "--a");
+      // testCase("<!--a-", "a");
+      // testCase("<!---a-", "-a");
+      // testCase("<!----a-", "--a");
+      // testCase("<!--a--", "a");
+      // testCase("<!---a--", "-a");
+      // testCase("<!----a--", "--a");
+      testCase("<!--<!", "<!");
+      testCase("<!--a<!", "a<!");
+      testCase("<!--!>", "!>");
+      testCase("<!---!>", "-!>");
+    });
+
+    describe("partial comments with invalid contents", () => {
+      testCase("<!--<!----", "<!--");
+      testCase("<!-- <!-- --", " <!-- ");
+      testCase("<!--<!---", "<!-");
+
+      // testCase("<!--<!---", "<!-");
+      testCase("<!-- <!-- -", " <!-- ");
+      // testCase("<!--<!--", "<!");
+
+      // testCase("<!--<!--", "<!");
+      testCase("<!-- <!-- ", " <!-- ");
+      // testCase("<!--<!-", "<!");
+    });
+
+    describe("incorrectly closable partial comments", () => {
+      testCase("<!----!", "");
+      testCase("<!--a--!", "a");
+      testCase("<!-- foo --!", " foo ");
+      testCase("<!-- <a> --!", " <a> ");
+      testCase("<!-- ---- --!", " ---- ");
+      testCase("<!-----!", "-");
+      testCase("<!------!", "--");
+      testCase("<!-------!", "---");
+      testCase("<!---a--!", "-a");
+      testCase("<!----a--!", "--a");
+      testCase("<!--a---!", "a-");
+      testCase("<!---a---!", "-a-");
+      testCase("<!----a---!", "--a-");
+      testCase("<!--a----!", "a--");
+      testCase("<!---a----!", "-a--");
+      testCase("<!----a----!", "--a--");
+      testCase("<!--<!--!", "<!");
+      testCase("<!--a<!--!", "a<!");
+      testCase("<!--!>--!", "!>");
+      testCase("<!---!>--!", "-!>");
+    });
+
+    describe("bogus comments", () => {
+      // NOTE: </> is not a bogus comment
+      testCase("<!>", "");
+      testCase("<?>", "?");
+      testCase("</%>", "%");
+      testCase("<!a>", "a");
+      testCase("<?a>", "?a");
+      testCase("</$a>", "$a");
+      testCase("<!ENTITY a>", "ENTITY a");
+      testCase("<![CDATA[a]]>", "[CDATA[a]]");
+      testCase("<?xml version=\"1.0\"?>", "?xml version=\"1.0\"?");
+    });
+
+    describe("partial bogus comments", () => {
+      // NOTE: </> is not a bogus comment
+      testCase("<!", "");
+      testCase("<?", "?");
+      testCase("</%", "%");
+      testCase("<!a", "a");
+      testCase("<?a", "?a");
+      testCase("</$a", "$a");
+      testCase("<!ENTITY a", "ENTITY a");
+      testCase("<![CDATA[a]]", "[CDATA[a]]");
+      testCase("<?xml version=\"1.0\"?", "?xml version=\"1.0\"?");
     });
   });
 });

@@ -44,27 +44,23 @@ export class Tokenizer {
           const raw = savedChunk + currentChunk.substring(0, i);
           if (/^<[a-zA-Z]/.test(raw)) {
             addToken(createRawStartTagToken(raw));
-          } else if (raw.startsWith("</")) {
+          } else if (/^<\/[a-zA-Z]/.test(raw)) {
             addToken(createRawEndTagToken(raw));
-          } else if (raw.startsWith("<!")) {
-            if (raw.startsWith("<!--")) {
-              const isCorrectEnd = raw.endsWith("-->") || (raw.endsWith("--!>") && raw.length >= 8);
-              if (isCorrectEnd) {
-                addToken(createRawCommentToken(raw));
-              } else {
-                // Not a true end of the comment. Continue parsing.
-                state = "bogusComment";
-                continue outer;
-              }
-            } else if (/^<!DOCTYPE/i.test(raw)) {
-              addToken(createRawDoctypeToken(raw));
-            } else if (raw.startsWith("<![CDATA[")) {
-              throw new Error("TODO");
-            } else {
+          } else if (raw.startsWith("<!--")) {
+            const isCorrectEnd = raw.endsWith("-->") || (raw.endsWith("--!>") && raw.length >= 8);
+            if (isCorrectEnd) {
               addToken(createRawCommentToken(raw));
+            } else {
+              // Not a true end of the comment. Continue parsing.
+              state = "bogusComment";
+              continue outer;
             }
-          } else {
+          } else if (/^<!DOCTYPE/i.test(raw)) {
+            addToken(createRawDoctypeToken(raw));
+          } else if (raw.startsWith("<![CDATA[")) {
             throw new Error("TODO");
+          } else {
+            addToken(createRawCommentToken(raw));
           }
           currentChunk = currentChunk.substring(i);
           savedChunk = "";
@@ -249,7 +245,7 @@ const transitionTable: Record<State, TransitionData> = {
       // "<!" as in "<!-->", "<!doctype>", "<![CDATA[]]>"
       ["!", 1, "bogusComment"],
       // "<?" as in "<?xml?>" (bogus comment)
-      ["?", 1, "TODO"],
+      ["?", 1, "bogusComment"],
       // Literal <
       [null, 1, "data"],
     ],
@@ -259,10 +255,10 @@ const transitionTable: Record<State, TransitionData> = {
     rules: [
       // "</a" as in "</a>"
       [/[a-zA-Z]/, 1, "tagName"],
-      // "</>" (bogus comment)
+      // "</>" (treated as a garbage)
       [">", 1, "TODO"],
       // "</ ... >" (bogus comment)
-      [null, 1, "TODO"],
+      [null, 1, "bogusComment"],
     ],
   },
   // "<a" as in "<a>"

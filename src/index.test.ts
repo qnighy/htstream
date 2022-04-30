@@ -82,6 +82,15 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["<!-- ---->", ..."-->"]);
   });
 
+  describe("bogus comments", () => {
+    defineWhiteBoxTest([createRawCommentToken("<!>"), "b"]);
+    defineWhiteBoxTest([createRawCommentToken("<!a>"), "b"]);
+    defineWhiteBoxTest([createRawCommentToken("<?>"), "b"]);
+    defineWhiteBoxTest([createRawCommentToken("<?a>"), "b"]);
+    defineWhiteBoxTest([createRawCommentToken("</%>"), "b"]);
+    defineWhiteBoxTest([createRawCommentToken("</#a>"), "b"]);
+  });
+
   describe("doctypes", () => {
     defineWhiteBoxTest(["<!doctype html>"]);
   });

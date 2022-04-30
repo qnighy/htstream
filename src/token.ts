@@ -203,7 +203,7 @@ export function parseToken(token: Token): ParsedToken<Token> {
     case "RawDoctypeToken":
       return createDoctypeToken();
     case "RawCommentToken":
-      throw new Error(`TODO: ${token.type}`);
+      return createCommentToken(commentValue(token));
     case "GarbageToken":
       return null;
     default:
@@ -278,6 +278,51 @@ export function textValue(token: TextTokenLike): string {
         }
       }
     );
+  } else {
+    return token.value;
+  }
+}
+
+export function commentValue(token: CommentTokenLike): string {
+  if (token.type === "RawCommentToken") {
+    const raw = token.raw;
+    let part: string;
+    if (raw.startsWith("<!--")) {
+      if (raw.endsWith("-->")) {
+        // "<!--a-->" or abruptly closed "<!--->" or "<!-->"
+        part = raw.substring(4, Math.max(raw.length - 3, 4));
+      } else if (raw.endsWith("--!>") && raw.length >= 8) {
+        // "<!--a--!>"
+        part = raw.substring(4, raw.length - 4);
+      } else if (raw.length >= 6 && raw.endsWith("--")) {
+        // "<!--a--", where ">" can be appended to form a complete comment
+        part = raw.substring(4, raw.length - 2);
+      } else if (raw.length >= 5 && raw.endsWith("-")) {
+        // "<!--a-", where "->" can be appended to form a complete comment
+        part = raw.substring(4, raw.length - 1);
+      } else if (raw.length >= 7 && raw.endsWith("--!")) {
+        // "<!--a--!", where ">" can be appended to form an invalid, yet complete comment
+        part = raw.substring(4, raw.length - 3);
+      } else {
+        // "<!--a"
+        part = raw.substring(4);
+      }
+    } else if (raw.startsWith("<!") || raw.startsWith("</")) {
+      if (raw.endsWith(">")) {
+        // "<!a>", "</%>"
+        part = raw.substring(2, raw.length - 1);
+      } else {
+        // "<!a", "</%"
+        part = raw.substring(2);
+      }
+    } else if (raw.endsWith(">")) {
+      // "<?a>"
+      part = raw.substring(1, raw.length - 1);
+    } else {
+      // "<?a"
+      part = raw.substring(1);
+    }
+    return part.replace(/\r\n?|\0/, (s) => s[0] === "\r" ? "\n" : "\uFFFD");
   } else {
     return token.value;
   }

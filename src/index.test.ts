@@ -62,6 +62,26 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["<a a/=\">", ..."\">"]);
   });
 
+  describe("comments", () => {
+    defineWhiteBoxTest(["<!--a-->", ..."-->"]);
+    defineWhiteBoxTest(["<!---->", ..."-->"]);
+    defineWhiteBoxTest(["<!--->", ..."-->"]);
+    defineWhiteBoxTest(["<!-->", ..."-->"]);
+    defineWhiteBoxTest([createRawCommentToken("<!->"), ..."-->"]);
+    defineWhiteBoxTest([createRawCommentToken("<!>"), ..."-->"]);
+    defineWhiteBoxTest(["<!--a--!>", ..."-->"]);
+    defineWhiteBoxTest(["<!----!>", ..."-->"]);
+    defineWhiteBoxTest(["<!---!>-->"]);
+    defineWhiteBoxTest(["<!--!>-->"]);
+    defineWhiteBoxTest([createRawCommentToken("<!-!>"), ..."-->"]);
+    defineWhiteBoxTest([createRawCommentToken("<!!>"), ..."-->"]);
+
+    defineWhiteBoxTest(["<!-- >-->", ..."-->"]);
+    defineWhiteBoxTest(["<!-- ->-->", ..."-->"]);
+    defineWhiteBoxTest(["<!-- --->", ..."-->"]);
+    defineWhiteBoxTest(["<!-- ---->", ..."-->"]);
+  });
+
   describe("doctypes", () => {
     defineWhiteBoxTest(["<!doctype html>"]);
   });
@@ -116,6 +136,13 @@ function defineWhiteBoxTest(parts: (string | RawToken)[]) {
   });
 }
 
+function defineWhiteBoxTestSkip(parts: (string | RawToken)[]) {
+  const text = parts.map((part) => typeof part === "string" ? part : part.raw).join("");
+  it.skip(`parses ${JSON.stringify(text)}`, () => {
+    whiteBoxTest(parts);
+  });
+}
+
 function whiteBoxTest(parts: (string | RawToken)[]) {
   const text = parts.map((part) => typeof part === "string" ? part : part.raw).join("");
   const states: Tokenizer[] = [];
@@ -140,6 +167,8 @@ function whiteBoxTest(parts: (string | RawToken)[]) {
             expected.push(createRawStartTagToken(part));
           } else if (/^<!DOCTYPE/i.test(part)) {
             expected.push(createRawDoctypeToken(part));
+          } else if (part.startsWith("<!--")) {
+            expected.push(createRawCommentToken(part));
           } else {
             expected.push(createRawTextToken(part));
           }

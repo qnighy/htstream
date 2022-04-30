@@ -42,26 +42,33 @@ export class Tokenizer {
           break;
         case "emitTag": {
           const raw = savedChunk + currentChunk.substring(0, i);
-          currentChunk = currentChunk.substring(i);
-          savedChunk = "";
-          i = 0;
           if (/^<[a-zA-Z]/.test(raw)) {
             addToken(createRawStartTagToken(raw));
           } else if (raw.startsWith("</")) {
             addToken(createRawEndTagToken(raw));
           } else if (raw.startsWith("<!")) {
             if (raw.startsWith("<!--")) {
-              throw new Error("TODO");
+              const isCorrectEnd = raw.endsWith("-->") || (raw.endsWith("--!>") && raw.length >= 8);
+              if (isCorrectEnd) {
+                addToken(createRawCommentToken(raw));
+              } else {
+                // Not a true end of the comment. Continue parsing.
+                state = "bogusComment";
+                continue outer;
+              }
             } else if (/^<!DOCTYPE/i.test(raw)) {
               addToken(createRawDoctypeToken(raw));
             } else if (raw.startsWith("<![CDATA[")) {
               throw new Error("TODO");
             } else {
-              throw new Error("TODO");
+              addToken(createRawCommentToken(raw));
             }
           } else {
             throw new Error("TODO");
           }
+          currentChunk = currentChunk.substring(i);
+          savedChunk = "";
+          i = 0;
           state = "data";
           continue outer;
         }

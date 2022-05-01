@@ -235,7 +235,7 @@ const transitionTable: Record<State, TransitionData> = {
   },
   // Continuation from "\r", always goes back to data
   dataCarriageReturn: {
-    rules: [[null, 1, "data"]],
+    rules: [[null, 0, "data"]],
   },
   // "<" as in "<a>", "</a>", "<!-->", "<!doctype>", "<![CDATA[]]>"
   tagOpen: {

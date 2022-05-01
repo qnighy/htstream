@@ -30,7 +30,7 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["A", "&#38;", "B"]);
     defineWhiteBoxTest(["A", "&#x26;", "B"]);
 
-    defineWhiteBoxTestSkip([delay("\r"), "<a>"]);
+    defineWhiteBoxTest([delay("\r"), "<a>"]);
     defineWhiteBoxTest([delay("\r")]);
     defineWhiteBoxTest([delay("&amp"), "<a>"]);
     defineWhiteBoxTest([delay("&amp")]);

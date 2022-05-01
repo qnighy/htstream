@@ -30,22 +30,22 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["A", "&#38;", "B"]);
     defineWhiteBoxTest(["A", "&#x26;", "B"]);
 
-    defineWhiteBoxTestSkip(["\r", "<a>"]);
-    defineWhiteBoxTest(["\r"]);
-    defineWhiteBoxTestSkip(["&amp", "<a>"]);
-    defineWhiteBoxTest(["&amp"]);
-    defineWhiteBoxTestSkip(["&am", "<a>"]);
-    defineWhiteBoxTest(["&am"]);
-    defineWhiteBoxTestSkip(["&#38", "<a>"]);
-    defineWhiteBoxTest(["&#38"]);
-    defineWhiteBoxTestSkip(["&#x26", "<a>"]);
-    defineWhiteBoxTest(["&#x26"]);
-    defineWhiteBoxTestSkip(["&#x", "<a>"]);
-    defineWhiteBoxTest(["&#x"]);
-    defineWhiteBoxTestSkip(["&#", "<a>"]);
-    defineWhiteBoxTest(["&#"]);
-    defineWhiteBoxTestSkip(["&", "<a>"]);
-    defineWhiteBoxTest(["&"]);
+    defineWhiteBoxTestSkip([delay("\r"), "<a>"]);
+    defineWhiteBoxTest([delay("\r")]);
+    defineWhiteBoxTestSkip([delay("&amp"), "<a>"]);
+    defineWhiteBoxTest([delay("&amp")]);
+    defineWhiteBoxTestSkip([delay("&am"), "<a>"]);
+    defineWhiteBoxTest([delay("&am")]);
+    defineWhiteBoxTestSkip([delay("&#38"), "<a>"]);
+    defineWhiteBoxTest([delay("&#38")]);
+    defineWhiteBoxTestSkip([delay("&#x26"), "<a>"]);
+    defineWhiteBoxTest([delay("&#x26")]);
+    defineWhiteBoxTestSkip([delay("&#x"), "<a>"]);
+    defineWhiteBoxTest([delay("&#x")]);
+    defineWhiteBoxTestSkip([delay("&#"), "<a>"]);
+    defineWhiteBoxTest([delay("&#")]);
+    defineWhiteBoxTestSkip([delay("&"), "<a>"]);
+    defineWhiteBoxTest([delay("&")]);
   });
 
   describe("tags", () => {
@@ -117,34 +117,34 @@ describe("tokenize (white box testing)", () => {
   });
 
   describe("texts ending with ambiguous parts", () => {
-    defineWhiteBoxTest(["a", "\r"]);
-    defineWhiteBoxTest(["a", "&amp"]);
-    defineWhiteBoxTest(["a", "&am"]);
-    defineWhiteBoxTest(["a", "&"]);
+    defineWhiteBoxTest(["a", delay("\r")]);
+    defineWhiteBoxTest(["a", delay("&amp")]);
+    defineWhiteBoxTest(["a", delay("&am")]);
+    defineWhiteBoxTest(["a", delay("&")]);
   });
 
   describe("short incomplete tags", () => {
-    defineWhiteBoxTest(["<"]);
-    defineWhiteBoxTest([createRawTextToken("</")]);
+    defineWhiteBoxTest([delay("<")]);
+    defineWhiteBoxTest([delay(createRawTextToken("</"))]);
   });
 
   describe("long incomplete tags", () => {
-    defineWhiteBoxTest([createGarbageToken("<a")]);
-    defineWhiteBoxTest([createGarbageToken("<a ")]);
-    defineWhiteBoxTest([createGarbageToken("<a a")]);
-    defineWhiteBoxTest([createGarbageToken("<a a=")]);
-    defineWhiteBoxTest([createGarbageToken("<a a=\"")]);
-    defineWhiteBoxTest([createGarbageToken("<a a='")]);
-    defineWhiteBoxTest([createGarbageToken("<a a=a")]);
-    defineWhiteBoxTest([createGarbageToken("</a")]);
+    defineWhiteBoxTest([delay(createGarbageToken("<a"))]);
+    defineWhiteBoxTest([delay(createGarbageToken("<a "))]);
+    defineWhiteBoxTest([delay(createGarbageToken("<a a"))]);
+    defineWhiteBoxTest([delay(createGarbageToken("<a a="))]);
+    defineWhiteBoxTest([delay(createGarbageToken("<a a=\""))]);
+    defineWhiteBoxTest([delay(createGarbageToken("<a a='"))]);
+    defineWhiteBoxTest([delay(createGarbageToken("<a a=a"))]);
+    defineWhiteBoxTest([delay(createGarbageToken("</a"))]);
   });
 
   describe("incomplete doctypes", () => {
-    defineWhiteBoxTest([createRawDoctypeToken("<!doctype html")]);
+    defineWhiteBoxTest([delay(createRawDoctypeToken("<!doctype html"))]);
   });
 
   describe("incomplete comments", () => {
-    defineWhiteBoxTest([createRawCommentToken("<!-- c")]);
+    defineWhiteBoxTest([delay(createRawCommentToken("<!-- c"))]);
   });
 });
 
@@ -159,22 +159,32 @@ function tokenizeAll(chunks: string[]): Token[] {
   return tokens;
 }
 
-function defineWhiteBoxTest(parts: (string | RawToken)[]) {
-  const text = parts.map((part) => typeof part === "string" ? part : part.raw).join("");
+type DelayedToken = { type: "Delayed", token: RawToken };
+
+function delay(part: string | RawToken): DelayedToken {
+  return { type: "Delayed", token: typeof part === "string" ? createRawTextToken(part) : part };
+}
+
+function getRaw(part: string | RawToken | DelayedToken): string {
+  return typeof part === "string" ? part : part.type === "Delayed" ? getRaw(part.token) : part.raw;
+}
+
+function defineWhiteBoxTest(parts: (string | RawToken | DelayedToken)[]) {
+  const text = parts.map(getRaw).join("");
   it(`parses ${JSON.stringify(text)}`, () => {
     whiteBoxTest(parts);
   });
 }
 
-function defineWhiteBoxTestSkip(parts: (string | RawToken)[]) {
-  const text = parts.map((part) => typeof part === "string" ? part : part.raw).join("");
+function defineWhiteBoxTestSkip(parts: (string | RawToken | DelayedToken)[]) {
+  const text = parts.map(getRaw).join("");
   it.skip(`parses ${JSON.stringify(text)}`, () => {
     whiteBoxTest(parts);
   });
 }
 
-function whiteBoxTest(parts: (string | RawToken)[]) {
-  const text = parts.map((part) => typeof part === "string" ? part : part.raw).join("");
+function whiteBoxTest(parts: (string | RawToken | DelayedToken)[]) {
+  const text = parts.map(getRaw).join("");
   const states: Tokenizer[] = [];
   const outputs: Token[][] = [];
 
@@ -184,13 +194,19 @@ function whiteBoxTest(parts: (string | RawToken)[]) {
     states.push(tokenizer);
     const expectedAll: Token[][] = [];
     const resultAll: Token[][] = [];
+    let nextExpected: Token[] = [];
     for (const part of parts) {
-      const partText = typeof part === "string" ? part : part.raw;
+      const partText = getRaw(part);
       for (let i = 0; i < partText.length; i++) {
-        const expected: Token[] = [];
+        const expected: Token[] = nextExpected;
+        nextExpected = [];
         if (i + 1 === partText.length) {
           if (typeof part !== "string") {
-            expected.push(part);
+            if (part.type === "Delayed") {
+              nextExpected.push(part.token);
+            } else {
+              expected.push(part);
+            }
           } else if (part.startsWith("</")) {
             expected.push(createRawEndTagToken(part));
           } else if (/^<[a-zA-Z]/.test(part)) {
@@ -207,16 +223,22 @@ function whiteBoxTest(parts: (string | RawToken)[]) {
         tokenizer.addChunk(partText[i], (token) => {
           result.push(token);
         });
-        if (resultAll.length + 1 === text.length) {
-          tokenizer.finish((token) => {
-            result.push(token);
-          });
-        }
         expectedAll.push(expected);
         resultAll.push(result);
         states.push(tokenizer.clone());
         outputs.push(result);
       }
+    }
+    {
+      const expected: Token[] = nextExpected;
+      const result: Token[] = [];
+      tokenizer.finish((token) => {
+        result.push(token);
+      });
+      expectedAll.push(expected);
+      resultAll.push(result);
+      states.push(tokenizer.clone());
+      outputs.push(result);
     }
     expect(resultAll).toEqual(expectedAll);
   }
@@ -239,11 +261,6 @@ function whiteBoxTest(parts: (string | RawToken)[]) {
         tokenizer.addChunk(chunk, (token) => {
           pushTokenAmalgamate(result, token);
         });
-        if (j === text.length) {
-          tokenizer.finish((token) => {
-            pushTokenAmalgamate(result, token);
-          });
-        }
         expectedAll[`${i}-${j}`] = {
           output: expected,
           state: states[j],

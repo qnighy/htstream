@@ -249,7 +249,7 @@ const transitionTable: Record<State, TransitionData> = {
       // "<?" as in "<?xml?>" (bogus comment)
       ["?", 1, "bogusComment"],
       // Literal <
-      [null, 1, "data"],
+      [null, 0, "data"],
     ],
   },
   // "</" as in "</a>"

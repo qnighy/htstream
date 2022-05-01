@@ -29,6 +29,23 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest([..."Here we have foo ", "< ", ..."bar"]);
     defineWhiteBoxTest(["A", "&#38;", "B"]);
     defineWhiteBoxTest(["A", "&#x26;", "B"]);
+
+    defineWhiteBoxTestSkip(["\r", "<a>"]);
+    defineWhiteBoxTest(["\r"]);
+    defineWhiteBoxTestSkip(["&amp", "<a>"]);
+    defineWhiteBoxTest(["&amp"]);
+    defineWhiteBoxTestSkip(["&am", "<a>"]);
+    defineWhiteBoxTest(["&am"]);
+    defineWhiteBoxTestSkip(["&#38", "<a>"]);
+    defineWhiteBoxTest(["&#38"]);
+    defineWhiteBoxTestSkip(["&#x26", "<a>"]);
+    defineWhiteBoxTest(["&#x26"]);
+    defineWhiteBoxTestSkip(["&#x", "<a>"]);
+    defineWhiteBoxTest(["&#x"]);
+    defineWhiteBoxTestSkip(["&#", "<a>"]);
+    defineWhiteBoxTest(["&#"]);
+    defineWhiteBoxTestSkip(["&", "<a>"]);
+    defineWhiteBoxTest(["&"]);
   });
 
   describe("tags", () => {

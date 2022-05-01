@@ -358,7 +358,7 @@ const transitionTable: Record<State, TransitionData> = {
       [/[a-zA-Z]/, 1, "namedCharacterReference"],
       // "&#" as in "&#38;", "&#x26;"
       ["#", 1, "numericCharacterReference"],
-      [null, 1, "TODO"],
+      [null, 0, "data"],
     ],
   },
   // "&a" as in "&amp;"
@@ -377,7 +377,7 @@ const transitionTable: Record<State, TransitionData> = {
       [/[xX]/, 1, "hexadecimalCharacterReference"],
       // "&#3" as in "&#38;"
       [/[0-9]/, 1, "decimalCharacterReference"],
-      [null, 0, "TODO"],
+      [null, 0, "data"],
     ],
   },
   // "&#x" or "&#x2" as in "&#x26;"

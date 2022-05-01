@@ -30,23 +30,32 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["A", "&#38;", "B"]);
     defineWhiteBoxTest(["A", "&#x26;", "B"]);
 
+    defineWhiteBoxTest(["\r%"]);
     defineWhiteBoxTest([delay("\r"), "<a>"]);
     defineWhiteBoxTest([delay("\r")]);
+    defineWhiteBoxTest(["<%"]);
     defineWhiteBoxTest([delay("<"), "<a>"]);
     defineWhiteBoxTest([delay("<")]);
+    defineWhiteBoxTest(["&amp%"]);
     defineWhiteBoxTest([delay("&amp"), "<a>"]);
     defineWhiteBoxTest([delay("&amp")]);
+    defineWhiteBoxTest(["&am%"]);
     defineWhiteBoxTest([delay("&am"), "<a>"]);
     defineWhiteBoxTest([delay("&am")]);
+    defineWhiteBoxTest(["&#38%"]);
     defineWhiteBoxTest([delay("&#38"), "<a>"]);
     defineWhiteBoxTest([delay("&#38")]);
+    defineWhiteBoxTest(["&#x26%"]);
     defineWhiteBoxTest([delay("&#x26"), "<a>"]);
     defineWhiteBoxTest([delay("&#x26")]);
+    defineWhiteBoxTest(["&#x%"]);
     defineWhiteBoxTest([delay("&#x"), "<a>"]);
     defineWhiteBoxTest([delay("&#x")]);
-    defineWhiteBoxTestSkip([delay("&#"), "<a>"]);
+    defineWhiteBoxTest(["&#%"]);
+    defineWhiteBoxTest([delay("&#"), "<a>"]);
     defineWhiteBoxTest([delay("&#")]);
-    defineWhiteBoxTestSkip([delay("&"), "<a>"]);
+    defineWhiteBoxTest(["&%"]);
+    defineWhiteBoxTest([delay("&"), "<a>"]);
     defineWhiteBoxTest([delay("&")]);
   });
 

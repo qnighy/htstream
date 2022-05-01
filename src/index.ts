@@ -1,4 +1,4 @@
-import { maybeInCharacterReference } from "./charref";
+import { entityNameMaxLength, maybeInCharacterReference } from "./charref";
 import { createGarbageToken, createRawCommentToken, createRawDoctypeToken, createRawEndTagToken, createRawStartTagToken, createRawTextToken, RawToken } from "./token";
 
 export type {
@@ -95,6 +95,13 @@ export class Tokenizer {
         continue outer;
       }
       throw new Error("unreachable");
+    }
+    if (state === "namedCharacterReference") {
+      const cref = textEnd !== null ? currentChunk.substring(textEnd) : savedChunk + currentChunk.substring(0, entityNameMaxLength + 1);
+      if (!maybeInCharacterReference(cref)) {
+        state = "data";
+        textEnd = currentChunk.length;
+      }
     }
     if (textEnd !== null) {
       const raw = savedChunk + currentChunk.substring(0, textEnd);

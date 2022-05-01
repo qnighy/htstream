@@ -2,6 +2,7 @@ import { entities, semilessEntities } from "./entities";
 
 const entityNames = /* #__PURE__ */ generateEntityNames();
 const semilessEntityDict = /* #__PURE__ */ generateSemilessEntityDict();
+export const entityNameMaxLength = /* #__PURE__ */ computeEntityNameMaxLength();
 
 export function maybeInCharacterReference(s: string): boolean {
   if (/^&[a-zA-Z][a-zA-Z0-9]*$/.test(s)) {
@@ -117,4 +118,8 @@ function generateSemilessEntityDict(): Record<string, string[]> {
     dict[name[0]].unshift(name);
   }
   return dict;
+}
+
+function computeEntityNameMaxLength(): number {
+  return Math.max(...entityNames.map((name) => name.length));
 }

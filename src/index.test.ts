@@ -57,6 +57,14 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["&%"]);
     defineWhiteBoxTest([delay("&"), "<a>"]);
     defineWhiteBoxTest([delay("&")]);
+
+    defineWhiteBoxTest(["&ampe", ..."rsand;"]);
+    defineWhiteBoxTest(["&notin;"]);
+    defineWhiteBoxTest(["&notit", ...";"]);
+    defineWhiteBoxTest(["&notin "]);
+    defineWhiteBoxTest(["&a "]);
+    defineWhiteBoxTest(["&ac "]);
+    defineWhiteBoxTest(["&ad"]);
   });
 
   describe("tags", () => {

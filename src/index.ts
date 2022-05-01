@@ -59,6 +59,8 @@ export class Tokenizer {
             addToken(createRawDoctypeToken(raw));
           } else if (raw.startsWith("<![CDATA[")) {
             throw new Error("TODO");
+          } else if (raw === "</>") {
+            addToken(createGarbageToken(raw));
           } else {
             addToken(createRawCommentToken(raw));
           }
@@ -256,7 +258,7 @@ const transitionTable: Record<State, TransitionData> = {
       // "</a" as in "</a>"
       [/[a-zA-Z]/, 1, "tagName"],
       // "</>" (treated as a garbage)
-      [">", 1, "TODO"],
+      [">", 1, "emitTag"],
       // "</ ... >" (bogus comment)
       [null, 1, "bogusComment"],
     ],

@@ -62,6 +62,10 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["<a a/=\">", ..."\">"]);
   });
 
+  describe("non-tags", () => {
+    defineWhiteBoxTest([createGarbageToken("</>")]);
+  });
+
   describe("comments", () => {
     defineWhiteBoxTest(["<!--a-->", ..."-->"]);
     defineWhiteBoxTest(["<!---->", ..."-->"]);

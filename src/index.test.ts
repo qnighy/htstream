@@ -67,6 +67,26 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["&ad"]);
   });
 
+  describe("RCDATA parsing", () => {
+    defineWhiteBoxTest(["<title>", createRawTextToken("<l"), ..."i>", "a", "</title>"]);
+    defineWhiteBoxTest(["<title>", createRawTextToken("</li>"), "a", "</title>"]);
+    defineWhiteBoxTest(["<title>", createRawTextToken("</li-"), ...">a", "</title>"]);
+    defineWhiteBoxTest(["<title>", createRawTextToken("</title-"), ...">a", "</title>"]);
+    defineWhiteBoxTest(["<textarea>", createRawTextToken("<l"), ..."i>", "a", "</textarea>"]);
+    defineWhiteBoxTest(["<textarea>", createRawTextToken("</li>"), "a", "</textarea>"]);
+
+    defineWhiteBoxTest(["<title>", "</title >", "<a>"]);
+    defineWhiteBoxTest(["<title>", "</title foo=bar>", "<a>"]);
+    defineWhiteBoxTest(["<title>", "</title/>", "<a>"]);
+
+    defineWhiteBoxTest(["<title>", "</title>", "<a>"]);
+    defineWhiteBoxTest(["<TITLE>", "</TITLE>", "<a>"]);
+    defineWhiteBoxTest(["<Title>", "</Title>", "<a>"]);
+    defineWhiteBoxTest(["<tiTle>", "</tiTle>", "<a>"]);
+    defineWhiteBoxTest(["<TITLE>", "</title>", "<a>"]);
+    defineWhiteBoxTest(["<title>", "</TITLE>", "<a>"]);
+  });
+
   describe("tags", () => {
     defineWhiteBoxTest(["<a>", ..."Hi", "</a>"]);
     defineWhiteBoxTest(["<div>", "</div>"]);
@@ -142,6 +162,20 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["a", delay("&")]);
   });
 
+  describe("incomplete tags in RCDATA", () => {
+    defineWhiteBoxTest(["<title>", delay(createGarbageToken("</title "))]);
+    defineWhiteBoxTest(["<title>", delay("</title")]);
+    defineWhiteBoxTest(["<title>", delay("</titl")]);
+    defineWhiteBoxTest(["<title>", delay("</div")]);
+    defineWhiteBoxTest(["<title>", delay("</")]);
+    defineWhiteBoxTest(["<title>", delay("<")]);
+    defineWhiteBoxTest(["<textarea>", delay("</textarea")]);
+    defineWhiteBoxTest(["<textarea>", delay("</textare")]);
+    defineWhiteBoxTest(["<textarea>", delay("</div")]);
+    defineWhiteBoxTest(["<textarea>", delay("</")]);
+    defineWhiteBoxTest(["<textarea>", delay("<")]);
+  });
+
   describe("short incomplete tags", () => {
     defineWhiteBoxTest([delay("<")]);
     defineWhiteBoxTest([delay(createRawTextToken("</"))]);
@@ -210,7 +244,7 @@ function whiteBoxTest(parts: (string | RawToken | DelayedToken)[]) {
   // Check one-step results
   {
     const tokenizer = new Tokenizer();
-    states.push(tokenizer);
+    states.push(tokenizer.clone());
     const expectedAll: Token[][] = [];
     const resultAll: Token[][] = [];
     let nextExpected: Token[] = [];

@@ -18,6 +18,7 @@ export type {
 export class Tokenizer {
   private _state: State = "data";
   private _savedChunk: string = "";
+  private _endTagName?: EndTagName | undefined = undefined;
   public addChunk(chunk: string, addToken: (token: RawToken) => void) {
     let state: State | "emitTag" = this._state;
     let savedChunk = this._savedChunk;
@@ -43,7 +44,12 @@ export class Tokenizer {
         case "emitTag": {
           const raw = savedChunk + currentChunk.substring(0, i);
           if (/^<[a-zA-Z]/.test(raw)) {
-            addToken(createRawStartTagToken(raw));
+            const tag = createRawStartTagToken(raw);
+            if ((endTagNames as Set<string>).has(tag.tagName)) {
+              this._endTagName = tag.tagName as EndTagName;
+              throw new Error(`TODO: ${tag.tagName}`);
+            }
+            addToken(tag);
           } else if (/^<\/[a-zA-Z]/.test(raw)) {
             addToken(createRawEndTagToken(raw));
           } else if (raw.startsWith("<!--")) {
@@ -154,12 +160,44 @@ export class Tokenizer {
     return Object.create(Tokenizer.prototype, {
       _state: { value: this._state, writable: true, configurable: true, enumerable: true },
       _savedChunk: { value: this._savedChunk, writable: true, configurable: true, enumerable: true },
+      _endTagName: { value: this._endTagName, writable: true, configurable: true, enumerable: true },
     });
   }
   equals(other: Tokenizer): boolean {
     return this._state === other._state && this._savedChunk === other._savedChunk;
   }
 }
+
+type EndTagName =
+  // RCDATA
+  | "title"
+  | "textarea"
+  // Special RAWTEXT
+  | "script"
+  // RAWTEXT
+  | "style"
+  | "xmp"
+  | "iframe"
+  | "noembed"
+  | "noframes"
+  | "noscript"
+  // CDATA (like RAWTEXT)
+  | "]]>"
+  // PLAINTEXT
+  | "plaintext";
+
+const endTagNames = /* #__PURE__ */ new Set<EndTagName>([
+  "title",
+  "textarea",
+  "script",
+  "style",
+  "xmp",
+  "iframe",
+  "noembed",
+  "noframes",
+  "noscript",
+  "plaintext",
+]);
 
 type State =
   | "data"

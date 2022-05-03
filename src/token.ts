@@ -41,8 +41,11 @@ export type TextToken = {
 
 export type RawTextToken = {
   type: "RawTextToken";
+  kind: RawTextTokenKind;
   raw: string;
 };
+
+export type RawTextTokenKind = "data" | "RCDATA" | "RAWTEXT";
 
 export type StartTagToken = {
   type: "StartTagToken";
@@ -118,9 +121,10 @@ export function createTextToken(value: string): TextToken {
   };
 }
 
-export function createRawTextToken(raw: string): RawTextToken {
+export function createRawTextToken(raw: string, kind: RawTextTokenKind = "data"): RawTextToken {
   return {
     type: "RawTextToken",
+    kind,
     raw,
   };
 }
@@ -265,13 +269,16 @@ export function appendToken(token: Token, base: string = ""): string {
 
 export function textValue(token: TextTokenLike): string {
   if (token.type === "RawTextToken") {
+    const isRCDATA = token.kind === "RCDATA";
     return token.raw.replace(
-      /\r\n?|&(?:#[xX][0-9a-fA-F]+|#[0-9]+|[a-zA-Z][a-zA-Z0-9]*);?/g,
+      /\r\n?|&(?:#[xX][0-9a-fA-F]+|#[0-9]+|[a-zA-Z][a-zA-Z0-9]*);?|\0/g,
       (s) => {
         if (s[0] === "\r") {
           return "\n";
         } else if (s[0] === "&") {
           return evaluateCharacterReference(s);
+        } else if (s === "\0") {
+          return isRCDATA ? "\uFFFD" : "";
         } else {
           // unreachable; just in case
           return s;

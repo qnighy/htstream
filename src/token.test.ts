@@ -85,7 +85,7 @@ describe("textValue", () => {
     });
   });
 
-  describe("for RawTextToken", () => {
+  describe("for RawTextToken (data)", () => {
     it("returns the parsed value (general case)", () => {
       expect(textValue(createRawTextToken("Hello, world!"))).toBe("Hello, world!");
     });
@@ -119,6 +119,51 @@ describe("textValue", () => {
       expect(textValue(createRawTextToken("a\r\n"))).toBe("a\n");
       expect(textValue(createRawTextToken("a\r"))).toBe("a\n");
       expect(textValue(createRawTextToken("a\n\n\nb\n\n\rc\n\r\nd\n\r\re\r\n\nf\r\n\rg\r\r\nh\r\r\ri"))).toBe("a\n\n\nb\n\n\nc\n\nd\n\n\ne\n\nf\n\ng\n\nh\n\n\ni");
+    });
+
+    it("removes NUL", () => {
+      expect(textValue(createRawTextToken("a\0b"))).toBe("ab");
+    });
+  });
+
+  describe("for RawTextToken (RCDATA)", () => {
+    it("returns the parsed value (general case)", () => {
+      expect(textValue(createRawTextToken("Hello, world!", "RCDATA"))).toBe("Hello, world!");
+    });
+
+    it("doesn't substitute stray <s", () => {
+      expect(textValue(createRawTextToken("a < b", "RCDATA"))).toBe("a < b");
+    });
+
+    it("doesn't substitute invalid &s", () => {
+      expect(textValue(createRawTextToken("a &", "RCDATA"))).toBe("a &");
+      expect(textValue(createRawTextToken("a & b", "RCDATA"))).toBe("a & b");
+      expect(textValue(createRawTextToken("foo&bar;", "RCDATA"))).toBe("foo&bar;");
+      expect(textValue(createRawTextToken("<&>", "RCDATA"))).toBe("<&>");
+      expect(textValue(createRawTextToken("<&#>", "RCDATA"))).toBe("<&#>");
+      expect(textValue(createRawTextToken("<&;>", "RCDATA"))).toBe("<&;>");
+      expect(textValue(createRawTextToken("<&#x>", "RCDATA"))).toBe("<&#x>");
+      expect(textValue(createRawTextToken("<&#z>", "RCDATA"))).toBe("<&#z>");
+    });
+
+    it("substitutes character references", () => {
+      expect(textValue(createRawTextToken("a &amp; b", "RCDATA"))).toBe("a & b");
+      expect(textValue(createRawTextToken("a&ampb", "RCDATA"))).toBe("a&b");
+      expect(textValue(createRawTextToken("a &notin; b", "RCDATA"))).toBe("a \u2209 b");
+      expect(textValue(createRawTextToken("a &notit; b", "RCDATA"))).toBe("a \u00ACit; b");
+      expect(textValue(createRawTextToken("a &#38; b", "RCDATA"))).toBe("a & b");
+      expect(textValue(createRawTextToken("a &#38 b", "RCDATA"))).toBe("a & b");
+      expect(textValue(createRawTextToken("a&#38b", "RCDATA"))).toBe("a&b");
+    });
+
+    it("substitutes CR and CRLF", () => {
+      expect(textValue(createRawTextToken("a\r\n", "RCDATA"))).toBe("a\n");
+      expect(textValue(createRawTextToken("a\r", "RCDATA"))).toBe("a\n");
+      expect(textValue(createRawTextToken("a\n\n\nb\n\n\rc\n\r\nd\n\r\re\r\n\nf\r\n\rg\r\r\nh\r\r\ri", "RCDATA"))).toBe("a\n\n\nb\n\n\nc\n\nd\n\n\ne\n\nf\n\ng\n\nh\n\n\ni");
+    });
+
+    it("substitutes NUL", () => {
+      expect(textValue(createRawTextToken("a\0b", "RCDATA"))).toBe("a\uFFFDb");
     });
   });
 });

@@ -154,7 +154,23 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["<script>", createRawTextToken("</title-", "RAWTEXT"), ...rawtextList(">a"), "</script>"]);
 
     defineWhiteBoxTest(["<script>", rawtext("<s"), ...rawtextList("cript>"), "</script>"]);
-    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript></script>"), "</script>"], { skip: true });
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript></script>"), "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript </script>"), "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript/</script>"), "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript></script/"), "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript></script "), "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cripta"), "</script>", "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript-"), "</script>", "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript#"), "</script>", "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript></scripta</script>")]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript></script-</script>")]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript></script#</script>")]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("-"), rawtext("<s"), ...rawtextList("cript>"), "</script>", "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), rawtext("<s"), ...rawtextList("cript>"), "</script>", "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("-->"), rawtext("<s"), ...rawtextList("cript>"), "</script>", "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--->"), rawtext("<s"), ...rawtextList("cript>"), "</script>", "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("---->"), rawtext("<s"), ...rawtextList("cript>"), "</script>", "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript>-->"), "</script>"]);
 
     defineWhiteBoxTest(["<script>", ...rawtextList("&amp;"), "</script>"]);
     defineWhiteBoxTest(["<script>", rawtext("\r\n"), "</script>"]);

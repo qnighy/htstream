@@ -26,11 +26,38 @@ export class Tokenizer {
     let currentChunk = chunk;
     let textEnd: number | null = null;
     let i = 0;
+
+    // script-specific state
+    let scriptStateIndex = 0;
+    let scriptStateSuffix = "";
+    let scriptState: ScriptState = "script";
+    if (this._endTagName !== undefined && (this._endTagName === "script" || this._endTagName === "script-escaped" || this._endTagName === "script-double-escaped")) {
+      scriptState = this._endTagName;
+      this._endTagName = "script";
+      // Special case: savedChunk contains the text that is already emitted.
+      // One of: "<", "<!", "<!-", "<s", "<sc", "<scr", "<scri", "<scrip", "<script", "</", "</s", "</sc", "</scr", "</scri", "</scrip", "</script", "-", and "--"
+      // In the "script" state: "<!" or "<!-"
+      // In the "script-escaped" state: one of "<s", "<sc", "<scr", "<scri", "<scrip", "<script", "-", and "--"
+      // In the "script-double-escaped" state: one of "<", "</", "</s", "</sc", "</scr", "</scri", "</scrip", "</script", "-", and "--"
+      scriptStateSuffix = savedChunk;
+      if (state === "data") savedChunk = "";
+    }
   outer:
     while (true) {
       switch (state) {
         case "data":
           textEnd = i;
+          break;
+        case "tagOpen":
+          if (this._endTagName === "script") {
+            [scriptState, scriptStateSuffix] = computeScriptState(scriptState, scriptStateSuffix, currentChunk.substring(scriptStateIndex, i));
+            scriptStateIndex = i;
+            if (scriptState === "script-double-escaped") {
+              // Not a real end tag.
+              state = "data";
+              continue outer;
+            }
+          }
           break;
         case "tagName":
           if (textEnd !== null) {
@@ -39,6 +66,7 @@ export class Tokenizer {
             savedChunk = "";
             currentChunk = currentChunk.substring(textEnd);
             i -= textEnd;
+            scriptStateIndex -= textEnd;
             textEnd = null;
           }
           break;
@@ -51,6 +79,11 @@ export class Tokenizer {
               if (this._endTagName === "noscript" && !this.scripting) {
                 // With scripting disabled, we parse contents in <noscript>
                 this._endTagName = undefined;
+              } else if (this._endTagName === "script") {
+                // Initialize script-specific state
+                scriptStateIndex = 0; // i will be 0 later
+                scriptStateSuffix = "";
+                scriptState = "script";
               }
             }
             addToken(tag);
@@ -151,12 +184,22 @@ export class Tokenizer {
         textEnd = currentChunk.length;
       }
     }
+    if (this._endTagName === "script") {
+      // Update state
+      [scriptState, scriptStateSuffix] = computeScriptState(scriptState, scriptStateSuffix, currentChunk.substring(scriptStateIndex));
+      scriptStateIndex = currentChunk.length;
+    }
     if (textEnd !== null) {
       const raw = savedChunk + currentChunk.substring(0, textEnd);
       if (raw) addToken(createRawTextToken(raw, textKind(this._endTagName)));
       savedChunk = currentChunk.substring(textEnd);
     } else {
       savedChunk += currentChunk;
+    }
+    if (this._endTagName === "script") {
+      // Save script-specific state
+      this._endTagName = scriptState;
+      if (state === "data") savedChunk = scriptStateSuffix;
     }
     this._state = state;
     this._savedChunk = savedChunk;
@@ -220,7 +263,12 @@ type EndTagName =
   | "title"
   | "textarea"
   // Special RAWTEXT
+  // "<script>"
   | "script"
+  // "<script>" ... "<!--"
+  | "script-escaped"
+  // "<script>" ... "<!--" ... "<script"
+  | "script-double-escaped"
   // RAWTEXT
   | "style"
   | "xmp"
@@ -525,4 +573,54 @@ function textKind(endTagName?: EndTagName | undefined): RawTextTokenKind {
   return endTagName === undefined ? "data" :
     endTagName === "title" || endTagName === "textarea" ? "RCDATA" :
     "RAWTEXT";
+}
+
+type ScriptState = "script" | "script-escaped" | "script-double-escaped";
+function computeScriptState(lastState: ScriptState, lastSuffix: string, input: string): [ScriptState, string] {
+  let text = lastSuffix + input;
+  let state = lastState;
+  while (true) {
+    switch (state) {
+      case "script": {
+        const match = /<!--/.exec(text);
+        if (match) {
+          // Retain the last "--"
+          text = text.substring(match.index + 2);
+          state = "script-escaped";
+          break;
+        } else {
+          for (const suffix of ["<!-", "<!", "<"]) {
+            if (text.endsWith(suffix)) return ["script", suffix];
+          }
+          return ["script", ""];
+        }
+      }
+      case "script-escaped": {
+        const match = /-->|<script(?=[ \r\n\t\f/>])/i.exec(text);
+        if (match) {
+          text = text.substring(match.index + match[0].length);
+          state = match[0] === "-->" ? "script" : "script-double-escaped";
+          break;
+        } else {
+          const re = /(?:-->|--?|<(?:s(?:c(?:r(?:i(?:p(?:t)?)?)?)?)?)?)$/g;
+          re.lastIndex = text.length - 7; // Longest suffix is "<script"
+          const match = re.exec(text);
+          return ["script-escaped", match?.[0] ?? ""];
+        }
+      }
+      case "script-double-escaped": {
+        const match = /-->|<\/script(?=[ \r\n\t\f/>])/i.exec(text);
+        if (match) {
+          text = text.substring(match.index + match[0].length);
+          state = match[0] === "-->" ? "script" : "script-escaped";
+          break;
+        } else {
+          const re = /(?:-->|--?|<(?:\/(?:s(?:c(?:r(?:i(?:p(?:t)?)?)?)?)?)?)?)$/g;
+          re.lastIndex = text.length - 8; // Longest suffix is "</script"
+          const match = re.exec(text);
+          return ["script-double-escaped", match?.[0] ?? ""];
+        }
+      }
+    }
+  }
 }

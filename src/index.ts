@@ -35,7 +35,7 @@ export class Tokenizer {
         case "tagName":
           if (textEnd !== null) {
             const raw = savedChunk + currentChunk.substring(0, textEnd);
-            if (raw) addToken(createRawTextToken(savedChunk + currentChunk.substring(0, textEnd), textKind(this._endTagName)));
+            if (raw) addToken(createRawTextToken(raw, textKind(this._endTagName)));
             savedChunk = "";
             currentChunk = currentChunk.substring(textEnd);
             i -= textEnd;
@@ -153,7 +153,7 @@ export class Tokenizer {
     }
     if (textEnd !== null) {
       const raw = savedChunk + currentChunk.substring(0, textEnd);
-      if (raw) addToken(createRawTextToken(savedChunk + currentChunk.substring(0, textEnd), textKind(this._endTagName)));
+      if (raw) addToken(createRawTextToken(raw, textKind(this._endTagName)));
       savedChunk = currentChunk.substring(textEnd);
     } else {
       savedChunk += currentChunk;

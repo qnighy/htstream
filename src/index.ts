@@ -52,7 +52,7 @@ export class Tokenizer {
                 // With scripting disabled, we parse contents in <noscript>
                 this._endTagName = undefined;
               }
-              if (this._endTagName === "script" || this._endTagName === "plaintext") {
+              if (this._endTagName === "script") {
                 throw new Error(`TODO: ${tag.tagName}`);
               }
             }
@@ -88,7 +88,12 @@ export class Tokenizer {
 
       if (this._endTagName) {
         // Override specific rules
-        if (state === "tagOpen" && currentChunk[i] !== "/") {
+        if (state === "data" && this._endTagName === "plaintext" && currentChunk[i] === "<") {
+          // Entirely ignore "<" in plaintext mode
+          state = "data";
+          i++;
+          continue;
+        } else if (state === "tagOpen" && currentChunk[i] !== "/") {
           // Only allow "</"
           state = "data";
           continue;
@@ -518,6 +523,7 @@ const transitionTable: Record<State, TransitionData> = {
 };
 
 function textKind(endTagName?: EndTagName | undefined): RawTextTokenKind {
+  if (!endTagName) return "data";
   switch (endTagName) {
     case "title":
     case "textarea":
@@ -528,8 +534,9 @@ function textKind(endTagName?: EndTagName | undefined): RawTextTokenKind {
     case "noembed":
     case "noframes":
     case "noscript":
+    case "plaintext":
       return "RAWTEXT";
     default:
-      return "data";
+      throw new Error(`TODO: ${endTagName}`);
   }
 }

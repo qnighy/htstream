@@ -117,9 +117,9 @@ export class Tokenizer {
       const transitionData: TransitionData = transitionTable[state];
       if (transitionData.selfSkip) {
         const match = transitionData.selfSkip.exec(currentChunk.substring(i));
-        if (match) {
+        if (match && match[0].length > 0) {
           i += match[0].length;
-          if (i < currentChunk.length) break;
+          continue;
         }
       }
       const ch = currentChunk[i];
@@ -344,6 +344,7 @@ type TransitionData = {
 
 const transitionTable: Record<State, TransitionData> = {
   data: {
+    selfSkip: /^[^<&\r]+/,
     rules: [
       // "&" as in "&amp;"
       ["&", 1, "characterReference"],
@@ -401,6 +402,7 @@ const transitionTable: Record<State, TransitionData> = {
   // "after attribute value (quoted)":
   //   "<a foo=\"bar\"" as in "<a foo=\"bar\" baz>"
   beforeAttributeName: {
+    selfSkip: /^[ \r\n\t\f]*(?:[^ \r\n\t\f<=>'"/]+=(?:"[^"]*"|'[^']*'|[^ \r\n\t\f<=>'"/]+(?=[ \r\n\t\f>]))[ \r\n\t\f]*)*/,
     rules: [
       [/[ \r\n\t\f/]/, 1, "beforeAttributeName"],
       // "<a >"

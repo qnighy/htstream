@@ -68,12 +68,18 @@ describe("tokenize (white box testing)", () => {
   });
 
   describe("RCDATA parsing", () => {
-    defineWhiteBoxTest(["<title>", createRawTextToken("<l"), ..."i>", "a", "</title>"]);
-    defineWhiteBoxTest(["<title>", createRawTextToken("</li>"), "a", "</title>"]);
-    defineWhiteBoxTest(["<title>", createRawTextToken("</li-"), ...">a", "</title>"]);
-    defineWhiteBoxTest(["<title>", createRawTextToken("</title-"), ...">a", "</title>"]);
-    defineWhiteBoxTest(["<textarea>", createRawTextToken("<l"), ..."i>", "a", "</textarea>"]);
-    defineWhiteBoxTest(["<textarea>", createRawTextToken("</li>"), "a", "</textarea>"]);
+    function rcdata(raw: string) {
+      return createRawTextToken(raw, "RCDATA");
+    }
+    function rcdataList(raw: string) {
+      return [...raw].map((c) => createRawTextToken(c, "RCDATA"));
+    }
+    defineWhiteBoxTest(["<title>", createRawTextToken("<l", "RCDATA"), ...rcdataList("i>"), rcdata("a"), "</title>"]);
+    defineWhiteBoxTest(["<title>", createRawTextToken("</li>", "RCDATA"), rcdata("a"), "</title>"]);
+    defineWhiteBoxTest(["<title>", createRawTextToken("</li-", "RCDATA"), ...rcdataList(">a"), "</title>"]);
+    defineWhiteBoxTest(["<title>", createRawTextToken("</title-", "RCDATA"), ...rcdataList(">a"), "</title>"]);
+    defineWhiteBoxTest(["<textarea>", createRawTextToken("<l", "RCDATA"), ...rcdataList("i>"), rcdata("a"), "</textarea>"]);
+    defineWhiteBoxTest(["<textarea>", createRawTextToken("</li>", "RCDATA"), rcdata("a"), "</textarea>"]);
 
     defineWhiteBoxTest(["<title>", "</title >", "<a>"]);
     defineWhiteBoxTest(["<title>", "</title foo=bar>", "<a>"]);
@@ -163,17 +169,20 @@ describe("tokenize (white box testing)", () => {
   });
 
   describe("incomplete tags in RCDATA", () => {
+    function rcdata(raw: string) {
+      return createRawTextToken(raw, "RCDATA");
+    }
     defineWhiteBoxTest(["<title>", delay(createGarbageToken("</title "))]);
-    defineWhiteBoxTest(["<title>", delay("</title")]);
-    defineWhiteBoxTest(["<title>", delay("</titl")]);
-    defineWhiteBoxTest(["<title>", delay("</div")]);
-    defineWhiteBoxTest(["<title>", delay("</")]);
-    defineWhiteBoxTest(["<title>", delay("<")]);
-    defineWhiteBoxTest(["<textarea>", delay("</textarea")]);
-    defineWhiteBoxTest(["<textarea>", delay("</textare")]);
-    defineWhiteBoxTest(["<textarea>", delay("</div")]);
-    defineWhiteBoxTest(["<textarea>", delay("</")]);
-    defineWhiteBoxTest(["<textarea>", delay("<")]);
+    defineWhiteBoxTest(["<title>", delay(rcdata("</title"))]);
+    defineWhiteBoxTest(["<title>", delay(rcdata("</titl"))]);
+    defineWhiteBoxTest(["<title>", delay(rcdata("</div"))]);
+    defineWhiteBoxTest(["<title>", delay(rcdata("</"))]);
+    defineWhiteBoxTest(["<title>", delay(rcdata("<"))]);
+    defineWhiteBoxTest(["<textarea>", delay(rcdata("</textarea"))]);
+    defineWhiteBoxTest(["<textarea>", delay(rcdata("</textare"))]);
+    defineWhiteBoxTest(["<textarea>", delay(rcdata("</div"))]);
+    defineWhiteBoxTest(["<textarea>", delay(rcdata("</"))]);
+    defineWhiteBoxTest(["<textarea>", delay(rcdata("<"))]);
   });
 
   describe("short incomplete tags", () => {
@@ -329,11 +338,15 @@ function whiteBoxTest(parts: (string | RawToken | DelayedToken)[]) {
 }
 
 function pushTokenAmalgamate(tokens: Token[], tokenToAdd: Token) {
-  if (tokenToAdd.type === "RawTextToken" && tokens.length > 0 && tokens[tokens.length - 1].type === "RawTextToken") {
-    const lastToken = tokens[tokens.length - 1] as RawTextToken;
-    const newToken = createRawTextToken(lastToken.raw + tokenToAdd.raw);
-    tokens.pop();
-    tokens.push(newToken);
+  if (tokenToAdd.type === "RawTextToken" && tokens.length > 0) {
+    const lastToken = tokens[tokens.length - 1];
+    if (lastToken.type === "RawTextToken" && lastToken.kind === tokenToAdd.kind) {
+      const newToken = createRawTextToken(lastToken.raw + tokenToAdd.raw, lastToken.kind);
+      tokens.pop();
+      tokens.push(newToken);
+    } else {
+      tokens.push(tokenToAdd);
+    }
   } else {
     tokens.push(tokenToAdd);
   }

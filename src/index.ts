@@ -1,5 +1,5 @@
 import { entityNameMaxLength, maybeInCharacterReference } from "./charref";
-import { createGarbageToken, createRawCommentToken, createRawDoctypeToken, createRawEndTagToken, createRawStartTagToken, createRawTextToken, RawToken } from "./token";
+import { createGarbageToken, createRawCommentToken, createRawDoctypeToken, createRawEndTagToken, createRawStartTagToken, createRawTextToken, RawTextTokenKind, RawToken } from "./token";
 
 export type {
   Token,
@@ -34,7 +34,7 @@ export class Tokenizer {
         case "tagName":
           if (textEnd !== null) {
             const raw = savedChunk + currentChunk.substring(0, textEnd);
-            if (raw) addToken(createRawTextToken(savedChunk + currentChunk.substring(0, textEnd)));
+            if (raw) addToken(createRawTextToken(savedChunk + currentChunk.substring(0, textEnd), textKind(this._endTagName)));
             savedChunk = "";
             currentChunk = currentChunk.substring(textEnd);
             i -= textEnd;
@@ -141,7 +141,7 @@ export class Tokenizer {
     }
     if (textEnd !== null) {
       const raw = savedChunk + currentChunk.substring(0, textEnd);
-      if (raw) addToken(createRawTextToken(savedChunk + currentChunk.substring(0, textEnd)));
+      if (raw) addToken(createRawTextToken(savedChunk + currentChunk.substring(0, textEnd), textKind(this._endTagName)));
       savedChunk = currentChunk.substring(textEnd);
     } else {
       savedChunk += currentChunk;
@@ -160,7 +160,7 @@ export class Tokenizer {
       case "numericCharacterReference":
       case "hexadecimalCharacterReference":
       case "decimalCharacterReference":
-        if (this._savedChunk) addToken(createRawTextToken(this._savedChunk));
+        if (this._savedChunk) addToken(createRawTextToken(this._savedChunk, textKind(this._endTagName)));
         break;
       case "tagName":
       case "beforeAttributeName":
@@ -170,7 +170,7 @@ export class Tokenizer {
       case "attributeValueSingleQuoted":
       case "attributeValueUnquoted":
         if (this._endTagName === "title" || this._endTagName === "textarea") {
-          addToken(createRawTextToken(this._savedChunk));
+          addToken(createRawTextToken(this._savedChunk, textKind(this._endTagName)));
         } else {
           addToken(createGarbageToken(this._savedChunk));
         }
@@ -505,3 +505,13 @@ const transitionTable: Record<State, TransitionData> = {
     ],
   },
 };
+
+function textKind(endTagName?: EndTagName | undefined): RawTextTokenKind {
+  switch (endTagName) {
+    case "title":
+    case "textarea":
+      return "RCDATA";
+    default:
+      return "data";
+  }
+}

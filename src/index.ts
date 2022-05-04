@@ -52,9 +52,6 @@ export class Tokenizer {
                 // With scripting disabled, we parse contents in <noscript>
                 this._endTagName = undefined;
               }
-              if (this._endTagName === "script") {
-                throw new Error(`TODO: ${tag.tagName}`);
-              }
             }
             addToken(tag);
           } else if (/^<\/[a-zA-Z]/.test(raw)) {
@@ -523,20 +520,7 @@ const transitionTable: Record<State, TransitionData> = {
 };
 
 function textKind(endTagName?: EndTagName | undefined): RawTextTokenKind {
-  if (!endTagName) return "data";
-  switch (endTagName) {
-    case "title":
-    case "textarea":
-      return "RCDATA";
-    case "style":
-    case "xmp":
-    case "iframe":
-    case "noembed":
-    case "noframes":
-    case "noscript":
-    case "plaintext":
-      return "RAWTEXT";
-    default:
-      throw new Error(`TODO: ${endTagName}`);
-  }
+  return endTagName === undefined ? "data" :
+    endTagName === "title" || endTagName === "textarea" ? "RCDATA" :
+    "RAWTEXT";
 }

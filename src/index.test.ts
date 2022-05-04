@@ -141,6 +141,39 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["<xmp>", "</XMP>", "<a>"]);
   });
 
+  describe("script data parsing", () => {
+    function rawtext(raw: string) {
+      return createRawTextToken(raw, "RAWTEXT");
+    }
+    function rawtextList(raw: string) {
+      return [...raw].map((c) => createRawTextToken(c, "RAWTEXT"));
+    }
+    defineWhiteBoxTest(["<script>", createRawTextToken("<l", "RAWTEXT"), ...rawtextList("i>"), rawtext("a"), "</script>"]);
+    defineWhiteBoxTest(["<script>", createRawTextToken("</li>", "RAWTEXT"), rawtext("a"), "</script>"]);
+    defineWhiteBoxTest(["<script>", createRawTextToken("</li-", "RAWTEXT"), ...rawtextList(">a"), "</script>"]);
+    defineWhiteBoxTest(["<script>", createRawTextToken("</title-", "RAWTEXT"), ...rawtextList(">a"), "</script>"]);
+
+    defineWhiteBoxTest(["<script>", rawtext("<s"), ...rawtextList("cript>"), "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("<!"), ...rawtextList("--"), rawtext("<s"), ...rawtextList("cript></script>"), "</script>"], { skip: true });
+
+    defineWhiteBoxTest(["<script>", ...rawtextList("&amp;"), "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("\r\n"), "</script>"]);
+    defineWhiteBoxTest(["<script>", rawtext("\ra"), "</script>"]);
+    defineWhiteBoxTest(["<script>", delay(rawtext("\r")), "</script>"]);
+    defineWhiteBoxTest(["<script>", delay(rawtext("\r")), rawtext("<a"), rawtext(">"), "</script>"]);
+
+    defineWhiteBoxTest(["<script>", "</script >", "<a>"]);
+    defineWhiteBoxTest(["<script>", "</script foo=bar>", "<a>"]);
+    defineWhiteBoxTest(["<script>", "</script/>", "<a>"]);
+
+    defineWhiteBoxTest(["<script>", "</script>", "<a>"]);
+    defineWhiteBoxTest(["<SCRIPT>", "</SCRIPT>", "<a>"]);
+    defineWhiteBoxTest(["<Script>", "</Script>", "<a>"]);
+    defineWhiteBoxTest(["<scRipt>", "</scRipt>", "<a>"]);
+    defineWhiteBoxTest(["<SCRIPT>", "</script>", "<a>"]);
+    defineWhiteBoxTest(["<script>", "</SCRIPT>", "<a>"]);
+  });
+
   describe("PLAINTEXT parsing", () => {
     function rawtext(raw: string) {
       return createRawTextToken(raw, "RAWTEXT");
@@ -324,20 +357,14 @@ function getRaw(part: string | RawToken | DelayedToken): string {
   return typeof part === "string" ? part : part.type === "Delayed" ? getRaw(part.token) : part.raw;
 }
 
-function defineWhiteBoxTest(parts: (string | RawToken | DelayedToken)[], options: { scripting?: boolean } = {}) {
-  const { scripting = false } = options;
+function defineWhiteBoxTest(parts: (string | RawToken | DelayedToken)[], options: { scripting?: boolean, skip?: boolean, only?: boolean } = {}) {
+  const { scripting = false, skip, only } = options;
   let additional = "";
   if (scripting) additional += " with scripting";
   const text = parts.map(getRaw).join("");
-  it(`parses ${JSON.stringify(text)}${additional}`, () => {
+  const itHere = only ? it.only : skip ? it.skip : it;
+  itHere(`parses ${JSON.stringify(text)}${additional}`, () => {
     whiteBoxTest(parts, options);
-  });
-}
-
-function defineWhiteBoxTestSkip(parts: (string | RawToken | DelayedToken)[]) {
-  const text = parts.map(getRaw).join("");
-  it.skip(`parses ${JSON.stringify(text)}`, () => {
-    whiteBoxTest(parts);
   });
 }
 

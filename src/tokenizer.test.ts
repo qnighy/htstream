@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 import { Token, createRawTextToken, createRawStartTagToken, createRawEndTagToken, textValue, createRawDoctypeToken, RawToken, createRawCommentToken, createGarbageToken } from "./token";
-import { Tokenizer } from "./index";
+import { Tokenizer } from "./tokenizer";
 
 describe("tokenize", () => {
   it("tokenizes the empty text", async () => {

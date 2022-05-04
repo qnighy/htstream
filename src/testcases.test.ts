@@ -2,7 +2,7 @@ import fs from "node:fs";
 import glob from "glob";
 import { describe, expect, it } from "@jest/globals";
 import { Global as JestGlobal } from "@jest/types";
-import { Tokenizer } from ".";
+import { Tokenizer } from "./tokenizer";
 import { appendToken, createTextToken, parseToken } from "./token";
 
 const updateSnapshots = process.env.UPDATE_SNAPSHOTS === "true";

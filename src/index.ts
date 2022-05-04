@@ -16,6 +16,7 @@ export type {
 } from "./token";
 
 export class Tokenizer {
+  public scripting = false;
   private _state: State = "data";
   private _savedChunk: string = "";
   private _endTagName?: EndTagName | undefined = undefined;
@@ -47,7 +48,11 @@ export class Tokenizer {
             const tag = createRawStartTagToken(raw);
             if ((endTagNames as Set<string>).has(tag.tagName)) {
               this._endTagName = tag.tagName as EndTagName;
-              if (this._endTagName !== "title" && this._endTagName !== "textarea") {
+              if (this._endTagName === "noscript" && !this.scripting) {
+                // With scripting disabled, we parse contents in <noscript>
+                this._endTagName = undefined;
+              }
+              if (this._endTagName === "script" || this._endTagName === "plaintext") {
                 throw new Error(`TODO: ${tag.tagName}`);
               }
             }
@@ -83,29 +88,27 @@ export class Tokenizer {
 
       if (this._endTagName) {
         // Override specific rules
-        if (this._endTagName === "title" || this._endTagName === "textarea") {
-          if (state === "tagOpen" && currentChunk[i] !== "/") {
-            // Only allow "</"
-            state = "data";
-            continue;
-          } else if (state === "endTagOpen" && !/[a-zA-Z]/.test(currentChunk[i])) {
-            // Only alow "</something"
-            state = "data";
-            continue;
-          } else if (state === "tagName" && /[ \r\n\t\f/>]/.test(currentChunk[i])) {
-            const raw = savedChunk + currentChunk.substring(0, i);
-            if (raw.substring(2).toLowerCase() === this._endTagName) {
-              // Exit from the special tag
-              this._endTagName = undefined;
-            } else {
-              state = "data";
-              continue;
-            }
-          } else if (state === "tagName" && !/[a-zA-Z]/.test(currentChunk[i])) {
-            // Invalid character like "</foo-bar". Ignore it.
+        if (state === "tagOpen" && currentChunk[i] !== "/") {
+          // Only allow "</"
+          state = "data";
+          continue;
+        } else if (state === "endTagOpen" && !/[a-zA-Z]/.test(currentChunk[i])) {
+          // Only alow "</something"
+          state = "data";
+          continue;
+        } else if (state === "tagName" && /[ \r\n\t\f/>]/.test(currentChunk[i])) {
+          const raw = savedChunk + currentChunk.substring(0, i);
+          if (raw.substring(2).toLowerCase() === this._endTagName) {
+            // Exit from the special tag
+            this._endTagName = undefined;
+          } else {
             state = "data";
             continue;
           }
+        } else if (state === "tagName" && !/[a-zA-Z]/.test(currentChunk[i])) {
+          // Invalid character like "</foo-bar". Ignore it.
+          state = "data";
+          continue;
         }
       }
 
@@ -135,6 +138,13 @@ export class Tokenizer {
     if (state === "namedCharacterReference") {
       const cref = textEnd !== null ? currentChunk.substring(textEnd) : savedChunk + currentChunk.substring(0, entityNameMaxLength + 1);
       if (!maybeInCharacterReference(cref)) {
+        state = "data";
+        textEnd = currentChunk.length;
+      }
+    }
+    if (this._endTagName && this._endTagName !== "title" && this._endTagName !== "textarea") {
+      if (state === "characterReference" || state === "namedCharacterReference" || state === "numericCharacterReference" || state === "decimalCharacterReference" || state === "hexadecimalCharacterReference") {
+        // CDATA-like state. Do not honor the character reference.
         state = "data";
         textEnd = currentChunk.length;
       }
@@ -169,7 +179,7 @@ export class Tokenizer {
       case "attributeValueDoubleQuoted":
       case "attributeValueSingleQuoted":
       case "attributeValueUnquoted":
-        if (this._endTagName === "title" || this._endTagName === "textarea") {
+        if (this._endTagName) {
           addToken(createRawTextToken(this._savedChunk, textKind(this._endTagName)));
         } else {
           addToken(createGarbageToken(this._savedChunk));
@@ -192,13 +202,14 @@ export class Tokenizer {
   }
   clone(): Tokenizer {
     return Object.create(Tokenizer.prototype, {
+      scripting: { value: this.scripting, writable: true, configurable: true, enumerable: true },
       _state: { value: this._state, writable: true, configurable: true, enumerable: true },
       _savedChunk: { value: this._savedChunk, writable: true, configurable: true, enumerable: true },
       _endTagName: { value: this._endTagName, writable: true, configurable: true, enumerable: true },
     });
   }
   equals(other: Tokenizer): boolean {
-    return this._state === other._state && this._savedChunk === other._savedChunk && this._endTagName === other._endTagName;
+    return this.scripting === other.scripting && this._state === other._state && this._savedChunk === other._savedChunk && this._endTagName === other._endTagName;
   }
 }
 
@@ -511,6 +522,13 @@ function textKind(endTagName?: EndTagName | undefined): RawTextTokenKind {
     case "title":
     case "textarea":
       return "RCDATA";
+    case "style":
+    case "xmp":
+    case "iframe":
+    case "noembed":
+    case "noframes":
+    case "noscript":
+      return "RAWTEXT";
     default:
       return "data";
   }

@@ -81,6 +81,8 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["<textarea>", createRawTextToken("<l", "RCDATA"), ...rcdataList("i>"), rcdata("a"), "</textarea>"]);
     defineWhiteBoxTest(["<textarea>", createRawTextToken("</li>", "RCDATA"), rcdata("a"), "</textarea>"]);
 
+    defineWhiteBoxTest(["<title>", rcdata("&amp;"), "</title>"]);
+
     defineWhiteBoxTest(["<title>", "</title >", "<a>"]);
     defineWhiteBoxTest(["<title>", "</title foo=bar>", "<a>"]);
     defineWhiteBoxTest(["<title>", "</title/>", "<a>"]);
@@ -91,6 +93,44 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["<tiTle>", "</tiTle>", "<a>"]);
     defineWhiteBoxTest(["<TITLE>", "</title>", "<a>"]);
     defineWhiteBoxTest(["<title>", "</TITLE>", "<a>"]);
+  });
+
+  describe("RAWTEXT parsing", () => {
+    function rawtext(raw: string) {
+      return createRawTextToken(raw, "RAWTEXT");
+    }
+    function rawtextList(raw: string) {
+      return [...raw].map((c) => createRawTextToken(c, "RAWTEXT"));
+    }
+    defineWhiteBoxTest(["<xmp>", createRawTextToken("<l", "RAWTEXT"), ...rawtextList("i>"), rawtext("a"), "</xmp>"]);
+    defineWhiteBoxTest(["<xmp>", createRawTextToken("</li>", "RAWTEXT"), rawtext("a"), "</xmp>"]);
+    defineWhiteBoxTest(["<xmp>", createRawTextToken("</li-", "RAWTEXT"), ...rawtextList(">a"), "</xmp>"]);
+    defineWhiteBoxTest(["<xmp>", createRawTextToken("</title-", "RAWTEXT"), ...rawtextList(">a"), "</xmp>"]);
+    defineWhiteBoxTest(["<style>", createRawTextToken("<l", "RAWTEXT"), ...rawtextList("i>"), rawtext("a"), "</style>"]);
+    defineWhiteBoxTest(["<style>", createRawTextToken("</li>", "RAWTEXT"), rawtext("a"), "</style>"]);
+    defineWhiteBoxTest(["<iframe>", createRawTextToken("<l", "RAWTEXT"), ...rawtextList("i>"), rawtext("a"), "</iframe>"]);
+    defineWhiteBoxTest(["<iframe>", createRawTextToken("</li>", "RAWTEXT"), rawtext("a"), "</iframe>"]);
+    defineWhiteBoxTest(["<noframes>", createRawTextToken("<l", "RAWTEXT"), ...rawtextList("i>"), rawtext("a"), "</noframes>"]);
+    defineWhiteBoxTest(["<noframes>", createRawTextToken("</li>", "RAWTEXT"), rawtext("a"), "</noframes>"]);
+    defineWhiteBoxTest(["<noembed>", createRawTextToken("<l", "RAWTEXT"), ...rawtextList("i>"), rawtext("a"), "</noembed>"]);
+    defineWhiteBoxTest(["<noembed>", createRawTextToken("</li>", "RAWTEXT"), rawtext("a"), "</noembed>"]);
+    defineWhiteBoxTest(["<noscript>", createRawTextToken("<l", "RAWTEXT"), ...rawtextList("i>"), rawtext("a"), "</noscript>"], { scripting: true });
+    defineWhiteBoxTest(["<noscript>", createRawTextToken("</li>", "RAWTEXT"), rawtext("a"), "</noscript>"], { scripting: true });
+    defineWhiteBoxTest(["<noscript>", "<li>", "a", "</noscript>"], { scripting: false });
+    defineWhiteBoxTest(["<noscript>", "</li>", "a", "</noscript>"], { scripting: false });
+
+    defineWhiteBoxTest(["<xmp>", ...rawtextList("&amp;"), "</xmp>"]);
+
+    defineWhiteBoxTest(["<xmp>", "</xmp >", "<a>"]);
+    defineWhiteBoxTest(["<xmp>", "</xmp foo=bar>", "<a>"]);
+    defineWhiteBoxTest(["<xmp>", "</xmp/>", "<a>"]);
+
+    defineWhiteBoxTest(["<xmp>", "</xmp>", "<a>"]);
+    defineWhiteBoxTest(["<XMP>", "</XMP>", "<a>"]);
+    defineWhiteBoxTest(["<Xmp>", "</Xmp>", "<a>"]);
+    defineWhiteBoxTest(["<xMp>", "</xMp>", "<a>"]);
+    defineWhiteBoxTest(["<XMP>", "</xmp>", "<a>"]);
+    defineWhiteBoxTest(["<xmp>", "</XMP>", "<a>"]);
   });
 
   describe("tags", () => {
@@ -185,6 +225,23 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["<textarea>", delay(rcdata("<"))]);
   });
 
+  describe("incomplete tags in RAWTEXT", () => {
+    function rawtext(raw: string) {
+      return createRawTextToken(raw, "RAWTEXT");
+    }
+    defineWhiteBoxTest(["<xmp>", delay(createGarbageToken("</xmp "))]);
+    defineWhiteBoxTest(["<xmp>", delay(rawtext("</xmp"))]);
+    defineWhiteBoxTest(["<xmp>", delay(rawtext("</xm"))]);
+    defineWhiteBoxTest(["<xmp>", delay(rawtext("</div"))]);
+    defineWhiteBoxTest(["<xmp>", delay(rawtext("</"))]);
+    defineWhiteBoxTest(["<xmp>", delay(rawtext("<"))]);
+    defineWhiteBoxTest(["<style>", delay(rawtext("</style"))]);
+    defineWhiteBoxTest(["<style>", delay(rawtext("</styl"))]);
+    defineWhiteBoxTest(["<style>", delay(rawtext("</div"))]);
+    defineWhiteBoxTest(["<style>", delay(rawtext("</"))]);
+    defineWhiteBoxTest(["<style>", delay(rawtext("<"))]);
+  });
+
   describe("short incomplete tags", () => {
     defineWhiteBoxTest([delay("<")]);
     defineWhiteBoxTest([delay(createRawTextToken("</"))]);
@@ -231,10 +288,13 @@ function getRaw(part: string | RawToken | DelayedToken): string {
   return typeof part === "string" ? part : part.type === "Delayed" ? getRaw(part.token) : part.raw;
 }
 
-function defineWhiteBoxTest(parts: (string | RawToken | DelayedToken)[]) {
+function defineWhiteBoxTest(parts: (string | RawToken | DelayedToken)[], options: { scripting?: boolean } = {}) {
+  const { scripting = false } = options;
+  let additional = "";
+  if (scripting) additional += " with scripting";
   const text = parts.map(getRaw).join("");
-  it(`parses ${JSON.stringify(text)}`, () => {
-    whiteBoxTest(parts);
+  it(`parses ${JSON.stringify(text)}${additional}`, () => {
+    whiteBoxTest(parts, options);
   });
 }
 
@@ -245,7 +305,7 @@ function defineWhiteBoxTestSkip(parts: (string | RawToken | DelayedToken)[]) {
   });
 }
 
-function whiteBoxTest(parts: (string | RawToken | DelayedToken)[]) {
+function whiteBoxTest(parts: (string | RawToken | DelayedToken)[], options: { scripting?: boolean } = {}) {
   const text = parts.map(getRaw).join("");
   const states: Tokenizer[] = [];
   const outputs: Token[][] = [];
@@ -253,6 +313,7 @@ function whiteBoxTest(parts: (string | RawToken | DelayedToken)[]) {
   // Check one-step results
   {
     const tokenizer = new Tokenizer();
+    if (options.scripting) tokenizer.scripting = true;
     states.push(tokenizer.clone());
     const expectedAll: Token[][] = [];
     const resultAll: Token[][] = [];

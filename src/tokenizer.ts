@@ -1,20 +1,6 @@
 import { entityNameMaxLength, maybeInCharacterReference } from "./charref";
 import { createGarbageToken, createRawCommentToken, createRawDoctypeToken, createRawEndTagToken, createRawStartTagToken, createRawTextToken, RawTextTokenKind, RawToken } from "./token";
 
-export type {
-  Token,
-  RawToken,
-  TextTokenLike,
-  StartTagTokenLike,
-  EndTagTokenLike,
-  TextToken,
-  RawTextToken,
-  StartTagToken,
-  RawStartTagToken,
-  EndTagToken,
-  RawEndTagToken,
-} from "./token";
-
 export class Tokenizer {
   public scripting = false;
   private _state: State = "data";

@@ -439,6 +439,7 @@ function pushTokenAmalgamate(tokens: Token[], tokenToAdd: Token) {
     const lastToken = tokens[tokens.length - 1];
     if (lastToken.type === "RawTextToken" && lastToken.kind === tokenToAdd.kind) {
       const newToken = createRawTextToken(lastToken.raw + tokenToAdd.raw, lastToken.kind);
+      expect(textValue(lastToken) + textValue(tokenToAdd)).toEqual(textValue(newToken));
       tokens.pop();
       tokens.push(newToken);
     } else {

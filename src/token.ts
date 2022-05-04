@@ -269,6 +269,21 @@ export function appendToken(token: Token, base: string = ""): string {
 
 export function textValue(token: TextTokenLike): string {
   if (token.type === "RawTextToken") {
+    if (token.kind === "RAWTEXT") {
+      return token.raw.replace(
+        /\r\n?|\0/g,
+        (s) => {
+          if (s[0] === "\r") {
+            return "\n";
+          } else if (s === "\0") {
+            return "\uFFFD";
+          } else {
+            // unreachable; just in case
+            return s;
+          }
+        }
+      );
+    }
     const isRCDATA = token.kind === "RCDATA";
     return token.raw.replace(
       /\r\n?|&(?:#[xX][0-9a-fA-F]+|#[0-9]+|[a-zA-Z][a-zA-Z0-9]*);?|\0/g,

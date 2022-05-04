@@ -165,6 +165,54 @@ describe("textValue", () => {
     it("substitutes NUL", () => {
       expect(textValue(createRawTextToken("a\0b", "RCDATA"))).toBe("a\uFFFDb");
     });
+
+    it("leaves tag-likes as is", () => {
+      expect(textValue(createRawTextToken("<a>", "RCDATA"))).toBe("<a>");
+      expect(textValue(createRawTextToken("<title></title>", "RCDATA"))).toBe("<title></title>");
+    });
+  });
+
+  describe("for RawTextToken (RAWTEXT)", () => {
+    it("returns the parsed value (general case)", () => {
+      expect(textValue(createRawTextToken("Hello, world!", "RAWTEXT"))).toBe("Hello, world!");
+    });
+
+    it("doesn't substitute stray <s", () => {
+      expect(textValue(createRawTextToken("a < b", "RAWTEXT"))).toBe("a < b");
+    });
+
+    it("doesn't substitute character references", () => {
+      expect(textValue(createRawTextToken("a &", "RAWTEXT"))).toBe("a &");
+      expect(textValue(createRawTextToken("a & b", "RAWTEXT"))).toBe("a & b");
+      expect(textValue(createRawTextToken("foo&bar;", "RAWTEXT"))).toBe("foo&bar;");
+      expect(textValue(createRawTextToken("<&>", "RAWTEXT"))).toBe("<&>");
+      expect(textValue(createRawTextToken("<&#>", "RAWTEXT"))).toBe("<&#>");
+      expect(textValue(createRawTextToken("<&;>", "RAWTEXT"))).toBe("<&;>");
+      expect(textValue(createRawTextToken("<&#x>", "RAWTEXT"))).toBe("<&#x>");
+      expect(textValue(createRawTextToken("<&#z>", "RAWTEXT"))).toBe("<&#z>");
+      expect(textValue(createRawTextToken("a &amp; b", "RAWTEXT"))).toBe("a &amp; b");
+      expect(textValue(createRawTextToken("a&ampb", "RAWTEXT"))).toBe("a&ampb");
+      expect(textValue(createRawTextToken("a &notin; b", "RAWTEXT"))).toBe("a &notin; b");
+      expect(textValue(createRawTextToken("a &notit; b", "RAWTEXT"))).toBe("a &notit; b");
+      expect(textValue(createRawTextToken("a &#38; b", "RAWTEXT"))).toBe("a &#38; b");
+      expect(textValue(createRawTextToken("a &#38 b", "RAWTEXT"))).toBe("a &#38 b");
+      expect(textValue(createRawTextToken("a&#38b", "RAWTEXT"))).toBe("a&#38b");
+    });
+
+    it("substitutes CR and CRLF", () => {
+      expect(textValue(createRawTextToken("a\r\n", "RAWTEXT"))).toBe("a\n");
+      expect(textValue(createRawTextToken("a\r", "RAWTEXT"))).toBe("a\n");
+      expect(textValue(createRawTextToken("a\n\n\nb\n\n\rc\n\r\nd\n\r\re\r\n\nf\r\n\rg\r\r\nh\r\r\ri", "RAWTEXT"))).toBe("a\n\n\nb\n\n\nc\n\nd\n\n\ne\n\nf\n\ng\n\nh\n\n\ni");
+    });
+
+    it("substitutes NUL", () => {
+      expect(textValue(createRawTextToken("a\0b", "RAWTEXT"))).toBe("a\uFFFDb");
+    });
+
+    it("leaves tag-likes as is", () => {
+      expect(textValue(createRawTextToken("<a>", "RAWTEXT"))).toBe("<a>");
+      expect(textValue(createRawTextToken("<title></title>", "RAWTEXT"))).toBe("<title></title>");
+    });
   });
 });
 

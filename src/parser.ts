@@ -41,7 +41,7 @@ export class TokenParser {
   public addToken(token: Token, actor: (action: Action) => void) {
     reconsume: while (true) {
       switch (this.mode) {
-        case "beforeHtml":
+        case "inBody":
           switch (token.type) {
             case "StartTagToken":
             case "RawStartTagToken":
@@ -137,6 +137,22 @@ export class TokenParser {
           });
           this.mode = "beforeHtml";
           continue reconsume;
+        case "beforeHtml":
+          this.mode = "beforeHead";
+          continue reconsume;
+        case "beforeHead":
+          this.mode = "inHead";
+          continue reconsume;
+        case "inHead":
+          this.mode = "afterHead";
+          continue reconsume;
+        case "afterHead":
+          this.mode = "inBody";
+          continue reconsume;
+        default: {
+          const _mode: never = this.mode;
+          throw new Error(`Unknown mode: ${_mode}`);
+        }
       }
     }
   }
@@ -153,4 +169,8 @@ export class TokenParser {
 
 type InsertionMode =
   | "initial"
-  | "beforeHtml";
+  | "beforeHtml"
+  | "beforeHead"
+  | "inHead"
+  | "afterHead"
+  | "inBody";

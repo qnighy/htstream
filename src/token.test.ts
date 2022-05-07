@@ -1,5 +1,5 @@
 import { describe, expect, it, xit } from "@jest/globals";
-import { normalizeTagName, createRawStartTagToken, textValue, createRawTextToken, createTextToken, createStartTagToken, createEndTagToken, createRawEndTagToken, parseToken, createRawDoctypeToken, createRawCommentToken, commentValue, createCommentToken } from "./token";
+import { normalizeTagName, createRawStartTagToken, textValue, createRawTextToken, createTextToken, createStartTagToken, createEndTagToken, createRawEndTagToken, parseToken, createRawDoctypeToken, createRawCommentToken, commentValue, createCommentToken, splitWhitespace } from "./token";
 
 describe("createStartTagToken", () => {
   it("normalizes the tag name", () => {
@@ -420,6 +420,174 @@ describe("commentValue", () => {
       testCase("<![CDATA[a]]", "[CDATA[a]]");
       testCase("<?xml version=\"1.0\"?", "?xml version=\"1.0\"?");
     });
+  });
+});
+
+describe("splitWhitespace", () => {
+  describe("for RawTextToken", () => {
+    function testCase(before: string, after: string) {
+      const input = before + after;
+      const expected = [
+        before ? createRawTextToken(before) : undefined,
+        after ? createRawTextToken(after) : undefined,
+      ];
+      it(`parses ${JSON.stringify(input)}`, () => {
+        expect(splitWhitespace(createRawTextToken(input))).toEqual(expected);
+      });
+    }
+    testCase("", "foo");
+    testCase("", "foo bar");
+    testCase("", "&#102;&#111;&#111;&#32;&#98;&#97;&#114;");
+    testCase("", "&#0102;&#0111;&#0111;&#032;&#098;&#097;&#0114;");
+    testCase("", "&#x66;&#x6f;&#x6f;&#x20;&#x62;&#x61;&#x72;");
+    testCase("", "&#x066;&#x06f;&#x06f;&#x020;&#x062;&#x061;&#x072;");
+    testCase("", "&#x66;&#x6F;&#x6F;&#x20;&#x62;&#x61;&#x72;");
+    testCase("", "&#x066;&#x06F;&#x06F;&#x020;&#x062;&#x061;&#x072;");
+    testCase("", "&#X66;&#X6f;&#X6f;&#X20;&#X62;&#X61;&#X72;");
+    testCase("", "&#X066;&#X06f;&#X06f;&#X020;&#X062;&#X061;&#X072;");
+    testCase(" ", "");
+    testCase("&#32;", "");
+    testCase("&#x20;", "");
+    testCase("&#X20;", "");
+    testCase(" ", "foo");
+    testCase(" ", "foo bar");
+    testCase("&#32;", "&#102;&#111;&#111;&#32;&#98;&#97;&#114;");
+    testCase("&#032;", "&#0102;&#0111;&#0111;&#032;&#098;&#097;&#0114;");
+    testCase("&#x20;", "&#x66;&#x6f;&#x6f;&#x20;&#x62;&#x61;&#x72;");
+    testCase("&#x020;", "&#x066;&#x06f;&#x06f;&#x020;&#x062;&#x061;&#x072;");
+    testCase("&#x20;", "&#x66;&#x6F;&#x6F;&#x20;&#x62;&#x61;&#x72;");
+    testCase("&#x020;", "&#x066;&#x06F;&#x06F;&#x020;&#x062;&#x061;&#x072;");
+    testCase("&#X20;", "&#X66;&#X6f;&#X6f;&#X20;&#X62;&#X61;&#X72;");
+    testCase("&#X020;", "&#X066;&#X06f;&#X06f;&#X020;&#X062;&#X061;&#X072;");
+    testCase("\r", "foo");
+    testCase("&#13;", "&#102;&#111;&#111;");
+    testCase("&#013;", "&#0102;&#0111;&#0111;");
+    testCase("&#xd;", "&#x66;&#x6f;&#x6f;");
+    testCase("&#x0d;", "&#x066;&#x06f;&#x06f;");
+    testCase("&#xD;", "&#x66;&#x6F;&#x6F;");
+    testCase("&#x0D;", "&#x066;&#x06F;&#x06F;");
+    testCase("&#Xd;", "&#X66;&#X6f;&#X6f;");
+    testCase("&#X0d;", "&#X066;&#X06f;&#X06f;");
+    testCase("\n", "foo");
+    testCase("&#10;", "&#102;&#111;&#111;");
+    testCase("&#010;", "&#0102;&#0111;&#0111;");
+    testCase("&#xa;", "&#x66;&#x6f;&#x6f;");
+    testCase("&#x0a;", "&#x066;&#x06f;&#x06f;");
+    testCase("&#xA;", "&#x66;&#x6F;&#x6F;");
+    testCase("&#x0A;", "&#x066;&#x06F;&#x06F;");
+    testCase("&#Xa;", "&#X66;&#X6f;&#X6f;");
+    testCase("&#X0a;", "&#X066;&#X06f;&#X06f;");
+    testCase("\t", "foo");
+    testCase("&#9;", "&#102;&#111;&#111;");
+    testCase("&#09;", "&#0102;&#0111;&#0111;");
+    testCase("&#x9;", "&#x66;&#x6f;&#x6f;");
+    testCase("&#x09;", "&#x066;&#x06f;&#x06f;");
+    testCase("&#x9;", "&#x66;&#x6F;&#x6F;");
+    testCase("&#x09;", "&#x066;&#x06F;&#x06F;");
+    testCase("&#X9;", "&#X66;&#X6f;&#X6f;");
+    testCase("&#X09;", "&#X066;&#X06f;&#X06f;");
+    testCase("\f", "foo");
+    testCase("&#12;", "&#102;&#111;&#111;");
+    testCase("&#012;", "&#0102;&#0111;&#0111;");
+    testCase("&#xc;", "&#x66;&#x6f;&#x6f;");
+    testCase("&#x0c;", "&#x066;&#x06f;&#x06f;");
+    testCase("&#xC;", "&#x66;&#x6F;&#x6F;");
+    testCase("&#x0C;", "&#x066;&#x06F;&#x06F;");
+    testCase("&#Xc;", "&#X66;&#X6f;&#X6f;");
+    testCase("&#X0c;", "&#X066;&#X06f;&#X06f;");
+    testCase("\r\n\t\f ", "foo");
+    testCase("&#13;&#10;&#9;&#12;&#32;", "&#102;&#111;&#111;");
+    testCase("&#013;&#010;&#09;&#012;&#032;", "&#0102;&#0111;&#0111;");
+    testCase("&#xd;&#xa;&#x9;&#xc;&#x20;", "&#x66;&#x6f;&#x6f;");
+    testCase("&#x0d;&#x0a;&#x09;&#x0c;&#x020;", "&#x066;&#x06f;&#x06f;");
+    testCase("&#xD;&#xA;&#x9;&#xC;&#x20;", "&#x66;&#x6F;&#x6F;");
+    testCase("&#x0D;&#x0A;&#x09;&#x0C;&#x020;", "&#x066;&#x06F;&#x06F;");
+    testCase("&#Xd;&#Xa;&#X9;&#Xc;&#X20;", "&#X66;&#X6f;&#X6f;");
+    testCase("&#X0d;&#X0a;&#X09;&#X0c;&#X020;", "&#X066;&#X06f;&#X06f;");
+    testCase("\r\n\t\f ", "foo\r\n\t\f ");
+    testCase("&#13;&#10;&#9;&#12;&#32;", "&#102;&#111;&#111;&#13;&#10;&#9;&#12;&#32;");
+    testCase("&#013;&#010;&#09;&#012;&#032;", "&#0102;&#0111;&#0111;&#013;&#010;&#09;&#012;&#032;");
+    testCase("&#xd;&#xa;&#x9;&#xc;&#x20;", "&#x66;&#x6f;&#x6f;&#xd;&#xa;&#x9;&#xc;&#x20;");
+    testCase("&#x0d;&#x0a;&#x09;&#x0c;&#x020;", "&#x066;&#x06f;&#x06f;&#x0d;&#x0a;&#x09;&#x0c;&#x020;");
+    testCase("&#xD;&#xA;&#x9;&#xC;&#x20;", "&#x66;&#x6F;&#x6F;&#xD;&#xA;&#x9;&#xC;&#x20;");
+    testCase("&#x0D;&#x0A;&#x09;&#x0C;&#x020;", "&#x066;&#x06F;&#x06F;&#x0D;&#x0A;&#x09;&#x0C;&#x020;");
+    testCase("&#Xd;&#Xa;&#X9;&#Xc;&#X20;", "&#X66;&#X6f;&#X6f;&#Xd;&#Xa;&#X9;&#Xc;&#X20;");
+    testCase("&#X0d;&#X0a;&#X09;&#X0c;&#X020;", "&#X066;&#X06f;&#X06f;&#X0d;&#X0a;&#X09;&#X0c;&#X020;");
+    testCase("\r\n\t\f \r\n\t\f ", "");
+    testCase("&#13;&#10;&#9;&#12;&#32;&#13;&#10;&#9;&#12;&#32;", "");
+    testCase("&#013;&#010;&#09;&#012;&#032;&#013;&#010;&#09;&#012;&#032;", "");
+    testCase("&#xd;&#xa;&#x9;&#xc;&#x20;&#xd;&#xa;&#x9;&#xc;&#x20;", "");
+    testCase("&#x0d;&#x0a;&#x09;&#x0c;&#x020;&#x0d;&#x0a;&#x09;&#x0c;&#x020;", "");
+    testCase("&#xD;&#xA;&#x9;&#xC;&#x20;&#xD;&#xA;&#x9;&#xC;&#x20;", "");
+    testCase("&#x0D;&#x0A;&#x09;&#x0C;&#x020;&#x0D;&#x0A;&#x09;&#x0C;&#x020;", "");
+    testCase("&#Xd;&#Xa;&#X9;&#Xc;&#X20;&#Xd;&#Xa;&#X9;&#Xc;&#X20;", "");
+    testCase("&#X0d;&#X0a;&#X09;&#X0c;&#X020;&#X0d;&#X0a;&#X09;&#X0c;&#X020;", "");
+    testCase("", "&");
+    testCase("", "&#");
+    testCase("", "&#3");
+    testCase("&#32", "");
+    testCase("", "&#320");
+    testCase("", "&#329");
+    testCase("&#32", "a");
+    testCase("&#32", "A");
+    testCase("&#32", "f");
+    testCase("&#32", "F");
+    testCase("&#32", "z");
+    testCase("&#32", "Z");
+    testCase("&#32", ".");
+    testCase("&#32&#32;", "");
+    testCase("&#32;&#32;", "");
+    testCase("&#32;", ";&#32;");
+    testCase("", "&#x");
+    testCase("", "&#X");
+    testCase("", "&#x2");
+    testCase("&#x20", "");
+    testCase("", "&#x200");
+    testCase("", "&#x209");
+    testCase("", "&#x20a");
+    testCase("", "&#x20A");
+    testCase("", "&#x20f");
+    testCase("", "&#x20F");
+    testCase("&#x20", "g");
+    testCase("&#x20", "G");
+    testCase("&#x20", "z");
+    testCase("&#x20", "Z");
+    testCase("&#x20", ".");
+    testCase("&#x20&#32;", "");
+    testCase("&#x20;&#32;", "");
+    testCase("&#x20;", ";&#32;");
+    testCase("&NewLine;", "");
+    testCase("&Tab;", "");
+    testCase("", "&NewLine");
+    testCase("", "&Tab");
+    testCase("", "&amp;");
+    testCase("", "&foo;");
+    testCase("", "&newline;");
+    testCase("", "&tab;");
+  });
+  describe("for TextToken", () => {
+    function testCase(before: string, after: string) {
+      const input = before + after;
+      const expected = [
+        before ? createTextToken(before) : undefined,
+        after ? createTextToken(after) : undefined,
+      ];
+      it(`parses ${JSON.stringify(input)}`, () => {
+        expect(splitWhitespace(createTextToken(input))).toEqual(expected);
+      });
+    }
+    testCase("", "foo");
+    testCase("", "foo bar");
+    testCase(" ", "");
+    testCase(" ", "foo");
+    testCase(" ", "foo bar");
+    testCase("\r", "foo");
+    testCase("\n", "foo");
+    testCase("\t", "foo");
+    testCase("\f", "foo");
+    testCase("\r\n\t\f ", "foo");
+    testCase("\r\n\t\f ", "foo\r\n\t\f ");
+    testCase("\r\n\t\f \r\n\t\f ", "");
   });
 });
 

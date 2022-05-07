@@ -350,6 +350,38 @@ export function commentValue(token: CommentTokenLike): string {
   }
 }
 
+
+export function splitWhitespace(token: TextToken): [TextToken | undefined, TextToken | undefined];
+export function splitWhitespace(token: RawTextToken): [RawTextToken | undefined, RawTextToken | undefined];
+export function splitWhitespace(token: TextTokenLike): [TextTokenLike | undefined, TextTokenLike | undefined];
+export function splitWhitespace(token: TextTokenLike): [TextTokenLike | undefined, TextTokenLike | undefined] {
+  if (token.type === "RawTextToken") {
+    const match = /^(?:[ \r\n\t\f]|&(?:#(?:0*(?:9|10|12|13|32)(?![0-9])|[Xx]0*(?:[9ACDacd]|20)(?![0-9a-fA-F]));?|NewLine;|Tab;))*/.exec(token.raw)!;
+    if (match[0].length === 0) {
+      return [undefined, token];
+    } else if (match[0].length === token.raw.length) {
+      return [token, undefined];
+    } else {
+      return [
+        createRawTextToken(match[0]),
+        createRawTextToken(token.raw.substring(match[0].length)),
+      ];
+    }
+  } else {
+    const match = /^[ \r\n\t\f]*/.exec(token.value)!;
+    if (match[0].length === 0) {
+      return [undefined, token];
+    } else if (match[0].length === token.value.length) {
+      return [token, undefined];
+    } else {
+      return [
+        createTextToken(match[0]),
+        createTextToken(token.value.substring(match[0].length)),
+      ];
+    }
+  }
+}
+
 export function normalizeTagName(s: string): string {
   if (/^[a-zA-Z0-9]+$/.test(s)) {
     return s.toLowerCase();

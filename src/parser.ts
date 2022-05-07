@@ -1,4 +1,4 @@
-import { CommentTokenLike, DoctypeTokenLike, EndTagTokenLike, StartTagTokenLike, TextTokenLike, textValue, Token } from "./token";
+import { CommentTokenLike, DoctypeTokenLike, EndTagTokenLike, splitWhitespace, StartTagTokenLike, TextTokenLike, Token } from "./token";
 
 export type Action = DoctypeAction | OpenAction | CloseAction | MergeAction | NodeAction | SkipAction;
 export type DoctypeAction = {
@@ -120,16 +120,24 @@ export class TokenParser {
               });
               return;
             case "TextToken":
-            case "RawTextToken":
-              if (/^[ \r\n\t\f]*$/.test(textValue(token))) {
+            case "RawTextToken": {
+              const [before, after] = splitWhitespace(token);
+              if (before) {
                 actor({
                   type: "SkipAction",
-                  token,
+                  token: before,
                 });
-                return;
-              } else if (/^[ \r\n\t\f]+/.test(textValue(token))) {
-                throw new Error("TODO: token splitting");
               }
+              if (after) {
+                actor({
+                  type: "DoctypeAction",
+                  mode: "quirks",
+                });
+                this.mode = "beforeHtml";
+                this.addToken(after, actor);
+              }
+              return;
+            }
           }
           actor({
             type: "DoctypeAction",

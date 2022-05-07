@@ -43,14 +43,6 @@ export class TokenParser {
       switch (this.mode) {
         case "beforeHtml":
           switch (token.type) {
-            case "DoctypeToken":
-            case "RawDoctypeToken":
-              actor({
-                type: "DoctypeAction",
-                mode: "no-quirks", // TODO
-                token,
-              });
-              return;
             case "StartTagToken":
             case "RawStartTagToken":
               this.stack.push(token.tagName);
@@ -96,6 +88,13 @@ export class TokenParser {
               });
               return;
             case "GarbageToken":
+              actor({
+                type: "SkipAction",
+                token,
+              });
+              return;
+            case "DoctypeToken":
+            case "RawDoctypeToken":
               actor({
                 type: "SkipAction",
                 token,

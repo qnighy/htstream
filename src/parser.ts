@@ -1,4 +1,4 @@
-import { CommentTokenLike, DoctypeTokenLike, EndTagTokenLike, StartTagTokenLike, TextTokenLike, Token } from "./token";
+import { CommentTokenLike, DoctypeTokenLike, EndTagTokenLike, StartTagTokenLike, TextTokenLike, textValue, Token } from "./token";
 
 export type Action = DoctypeAction | OpenAction | CloseAction | MergeAction | NodeAction | SkipAction;
 export type DoctypeAction = {
@@ -36,66 +36,109 @@ export type SkipAction = {
   token: Token;
 };
 export class TokenParser {
+  mode: InsertionMode = "initial";
   stack: string[] = [];
   public addToken(token: Token, actor: (action: Action) => void) {
-    switch (token.type) {
-      case "DoctypeToken":
-      case "RawDoctypeToken":
-        actor({
-          type: "DoctypeAction",
-          mode: "no-quirks", // TODO
-          token,
-        });
-        break;
-      case "StartTagToken":
-      case "RawStartTagToken":
-        this.stack.push(token.tagName);
-        actor({
-          type: "OpenAction",
-          tagName: token.tagName,
-          token,
-        });
-        break;
-      case "EndTagToken":
-      case "RawEndTagToken": {
-        const matchingIndex = this.stack.lastIndexOf(token.tagName);
-        if (matchingIndex === -1) {
-          actor({
-            type: "SkipAction",
-            token,
-          });
-        } else {
-          while (this.stack.length > matchingIndex + 1) {
-            const tagName = this.stack.pop()!;
-            actor({
-              type: "CloseAction",
-              tagName,
-            });
+    reconsume: while (true) {
+      switch (this.mode) {
+        case "beforeHtml":
+          switch (token.type) {
+            case "DoctypeToken":
+            case "RawDoctypeToken":
+              actor({
+                type: "DoctypeAction",
+                mode: "no-quirks", // TODO
+                token,
+              });
+              return;
+            case "StartTagToken":
+            case "RawStartTagToken":
+              this.stack.push(token.tagName);
+              actor({
+                type: "OpenAction",
+                tagName: token.tagName,
+                token,
+              });
+              return;
+            case "EndTagToken":
+            case "RawEndTagToken": {
+              const matchingIndex = this.stack.lastIndexOf(token.tagName);
+              if (matchingIndex === -1) {
+                actor({
+                  type: "SkipAction",
+                  token,
+                });
+                return;
+              } else {
+                while (this.stack.length > matchingIndex + 1) {
+                  const tagName = this.stack.pop()!;
+                  actor({
+                    type: "CloseAction",
+                    tagName,
+                  });
+                }
+                this.stack.pop();
+                actor({
+                  type: "CloseAction",
+                  tagName: token.tagName,
+                  token,
+                });
+                return;
+              }
+            }
+            case "CommentToken":
+            case "RawCommentToken":
+            case "TextToken":
+            case "RawTextToken":
+              actor({
+                type: "NodeAction",
+                token,
+              });
+              return;
+            case "GarbageToken":
+              actor({
+                type: "SkipAction",
+                token,
+              });
+              return;
           }
-          this.stack.pop();
+        case "initial":
+          switch (token.type) {
+            case "DoctypeToken":
+            case "RawDoctypeToken":
+              actor({
+                type: "DoctypeAction",
+                mode: "no-quirks", // TODO
+                token,
+              });
+              this.mode = "beforeHtml";
+              return;
+            case "CommentToken":
+            case "RawCommentToken":
+              actor({
+                type: "NodeAction",
+                token,
+              });
+              return;
+            case "TextToken":
+            case "RawTextToken":
+              if (/^[ \r\n\t\f]*$/.test(textValue(token))) {
+                actor({
+                  type: "SkipAction",
+                  token,
+                });
+                return;
+              } else if (/^[ \r\n\t\f]+/.test(textValue(token))) {
+                throw new Error("TODO: token splitting");
+              }
+          }
           actor({
-            type: "CloseAction",
-            tagName: token.tagName,
-            token,
+            type: "DoctypeAction",
+            mode: "quirks",
           });
-        }
-        break;
+          this.mode = "beforeHtml";
+          continue reconsume;
       }
-      case "CommentToken":
-      case "RawCommentToken":
-      case "TextToken":
-      case "RawTextToken":
-        actor({
-          type: "NodeAction",
-          token,
-        });
-        break;
-      case "GarbageToken":
-        actor({
-          type: "SkipAction",
-          token,
-        });
-        break;
     }
   }
   public finish(actor: (token: Action) => void) {
@@ -108,3 +151,7 @@ export class TokenParser {
     }
   }
 }
+
+type InsertionMode =
+  | "initial"
+  | "beforeHtml";

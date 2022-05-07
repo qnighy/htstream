@@ -10,7 +10,10 @@ import { TokenParser } from "./parser";
 const updateSnapshots = process.env.UPDATE_SNAPSHOTS === "true";
 
 const testcases = glob.sync("testdata/normalize/**/*.html", {
-  ignore: "**/*.tokenize.html",
+  ignore: [
+    "**/*.tokenize.html",
+    "**/*.parse.html",
+  ],
 });
 
 type TestcaseMetadata = {

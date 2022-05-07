@@ -146,6 +146,59 @@ export class TokenParser {
           this.mode = "beforeHtml";
           continue reconsume;
         case "beforeHtml":
+          switch (token.type) {
+            case "DoctypeToken":
+            case "RawDoctypeToken":
+              actor({
+                type: "SkipAction",
+                token,
+              });
+              return;
+            case "CommentToken":
+            case "RawCommentToken":
+              actor({
+                type: "NodeAction",
+                token,
+              });
+              return;
+            case "TextToken":
+            case "RawTextToken": {
+              const [before, after] = splitWhitespace(token);
+              if (before) {
+                actor({
+                  type: "SkipAction",
+                  token: before,
+                });
+              }
+              if (after) {
+                this.mode = "beforeHead";
+                this.addToken(after, actor);
+              }
+              return;
+            }
+            case "StartTagToken":
+            case "RawStartTagToken":
+              if (token.tagName === "html") {
+                this.stack.push(token.tagName);
+                actor({
+                  type: "OpenAction",
+                  tagName: token.tagName,
+                  token,
+                });
+                this.mode = "beforeHead";
+                return;
+              }
+              break;
+            case "EndTagToken":
+            case "RawEndTagToken":
+              if (!["head", "body", "html", "br"].includes(token.tagName)) {
+                actor({
+                  type: "SkipAction",
+                  token,
+                });
+                return;
+              }
+          }
           this.mode = "beforeHead";
           continue reconsume;
         case "beforeHead":

@@ -235,10 +235,15 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["<a a= \">\">"]);
     defineWhiteBoxTest(["<a a =\">\">"]);
     defineWhiteBoxTest(["<a a/=\">", ..."\">"]);
+
+    defineWhiteBoxTest(["x", "<a>"]);
+    defineWhiteBoxTest(["x", "</a>"]);
   });
 
   describe("non-tags", () => {
     defineWhiteBoxTest([createGarbageToken("</>")]);
+
+    defineWhiteBoxTest(["x", createGarbageToken("</>")]);
   });
 
   describe("comments", () => {
@@ -259,6 +264,8 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest(["<!-- ->-->", ..."-->"]);
     defineWhiteBoxTest(["<!-- --->", ..."-->"]);
     defineWhiteBoxTest(["<!-- ---->", ..."-->"]);
+
+    defineWhiteBoxTest(["x", "<!---->"]);
   });
 
   describe("bogus comments", () => {
@@ -268,6 +275,8 @@ describe("tokenize (white box testing)", () => {
     defineWhiteBoxTest([createRawCommentToken("<?a>"), "b"]);
     defineWhiteBoxTest([createRawCommentToken("</%>"), "b"]);
     defineWhiteBoxTest([createRawCommentToken("</#a>"), "b"]);
+
+    defineWhiteBoxTest(["x", createRawCommentToken("<?>")]);
   });
 
   describe("doctypes", () => {

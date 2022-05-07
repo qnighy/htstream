@@ -46,6 +46,8 @@ export class Tokenizer {
           }
           break;
         case "tagName":
+        case "bogusComment":
+        case "endTagOpen":
           if (textEnd !== null) {
             const raw = savedChunk + currentChunk.substring(0, textEnd);
             if (raw) addToken(createRawTextToken(raw, textKind(this._endTagName)));

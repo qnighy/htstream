@@ -35,7 +35,7 @@ export function maybeInCharacterReference(s: string): boolean {
 /**
  * @param s a string which is known to match /^&(?:#[xX][0-9a-fA-F]+|#[0-9]+|[a-zA-Z][a-zA-Z0-9]*);?$/
  */
-export function evaluateCharacterReference(s: string): string {
+export function evaluateCharacterReference(s: string, exact: boolean = false): string {
   if (s[1] === "#") {
     if (s[2] === "x" || s[2] === "X") {
       // parseInt ignores semicolon
@@ -54,7 +54,7 @@ export function evaluateCharacterReference(s: string): string {
   const maybeName = s.substring(1);
   if (Object.prototype.hasOwnProperty.call(semilessEntityDict, maybeName[0])) {
     for (const name of semilessEntityDict[maybeName[0]]) {
-      if (maybeName.startsWith(name)) {
+      if (maybeName.startsWith(name) && (!exact || name === maybeName)) {
         return `${entities[name]}${maybeName.substring(name.length)}`;
       }
     }

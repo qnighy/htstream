@@ -50,7 +50,7 @@ export type RawTextTokenKind = "data" | "RCDATA" | "RAWTEXT";
 export type StartTagToken = {
   type: "StartTagToken";
   tagName: string;
-  // attributes: Attribute[];
+  attributes: Record<string, string>;
 }
 
 export type RawStartTagToken = {
@@ -129,10 +129,11 @@ export function createRawTextToken(raw: string, kind: RawTextTokenKind = "data")
   };
 }
 
-export function createStartTagToken(tagName: string): StartTagToken {
+export function createStartTagToken(tagName: string, attributes: Record<string, string> = {}): StartTagToken {
   return {
     type: "StartTagToken",
     tagName: normalizeTagName(tagName),
+    attributes,
   };
 }
 
@@ -201,7 +202,7 @@ export function parseToken(token: Token): ParsedToken<Token> {
     case "RawTextToken":
       return createTextToken(textValue(token));
     case "RawStartTagToken":
-      return createStartTagToken(token.tagName);
+      return createStartTagToken(token.tagName, parseAttributes(token.raw));
     case "RawEndTagToken":
       return createEndTagToken(token.tagName);
     case "RawDoctypeToken":
@@ -380,6 +381,50 @@ export function splitWhitespace(token: TextTokenLike): [TextTokenLike | undefine
       ];
     }
   }
+}
+
+export function parseAttributes(raw: string): Record<string, string> {
+  const attributes: Record<string, string> = {};
+  const attrStart = /^<[a-zA-Z][^ \r\n\t\f/>]*[ \r\n\t\f/]*/.exec(raw)![0].length;
+  const attrsRaw = raw.substring(attrStart, raw.length - 1);
+  for (const attrMatch of attrsRaw.matchAll(/([^ \r\n\t\f/>][^ \r\n\t\f/>=]*)[ \r\n\t\f]*(?:=[ \r\n\t\f]*("[^"]*"|'[^']*'|[^ \r\n\t\f>"'][^ \r\n\t\f>]*)[ \r\n\t\f/]*|\/[ \r\n\t\f/]*|(?=[^ \r\n\t\f/>=]))?/gy)) {
+    const [, name, valueRaw] = attrMatch;
+    if (Object.prototype.hasOwnProperty.call(attributes, name)) continue;
+    let valueBeforeEscape: string;
+    if (valueRaw === undefined) {
+      valueBeforeEscape = "";
+    } else if (valueRaw.startsWith('"')) {
+      valueBeforeEscape = valueRaw.substring(1, valueRaw.length - 1);
+    } else if (valueRaw.startsWith("'")) {
+      valueBeforeEscape = valueRaw.substring(1, valueRaw.length - 1);
+    } else {
+      valueBeforeEscape = valueRaw;
+    }
+    const value = valueBeforeEscape.replace(
+      // Additional condition (?![a-zA-Z0-9=]) to not replace something like "foo=bar&copy=true"
+      /\r\n?|&(?:#[xX][0-9a-fA-F]+|#[0-9]+|[a-zA-Z][a-zA-Z0-9]*(?![a-zA-Z0-9=]));?|\0/g,
+      (s) => {
+        if (s[0] === "\r") {
+          return "\n";
+        } else if (s[0] === "&") {
+          // Use exact=true to not replace something like "foo=bar&lts=true"
+          return evaluateCharacterReference(s, true);
+        } else if (s === "\0") {
+          return "\uFFFD";
+        } else {
+          // unreachable; just in case
+          return s;
+        }
+      }
+    );
+    Object.defineProperty(attributes, name, {
+      value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  }
+  return attributes;
 }
 
 export function normalizeTagName(s: string): string {

@@ -1,5 +1,5 @@
 import { describe, expect, it, xit } from "@jest/globals";
-import { normalizeTagName, createRawStartTagToken, textValue, createRawTextToken, createTextToken, createStartTagToken, createEndTagToken, createRawEndTagToken, parseToken, createRawDoctypeToken, createRawCommentToken, commentValue, createCommentToken, splitWhitespace } from "./token";
+import { normalizeTagName, createRawStartTagToken, textValue, createRawTextToken, createTextToken, createStartTagToken, createEndTagToken, createRawEndTagToken, parseToken, createRawDoctypeToken, createRawCommentToken, commentValue, createCommentToken, splitWhitespace, parseAttributes } from "./token";
 
 describe("createStartTagToken", () => {
   it("normalizes the tag name", () => {
@@ -589,6 +589,75 @@ describe("splitWhitespace", () => {
     testCase("\r\n\t\f ", "foo\r\n\t\f ");
     testCase("\r\n\t\f \r\n\t\f ", "");
   });
+});
+
+describe("parseAttributes", () => {
+  function testCase(input: string, expected: Record<string, string>) {
+    it(`parses ${JSON.stringify(input)}`, () => {
+      expect(parseAttributes(input)).toEqual(expected);
+    });
+  };
+  testCase("<a>", {});
+  testCase("<a/>", {});
+  testCase("<a foo>", { foo: "" });
+  testCase("<a foo=bar>", { foo: "bar" });
+  testCase("<a foo bar=baz>", { foo: "", bar: "baz" });
+  testCase("<a foo=bar bar=baz>", { foo: "bar", bar: "baz" });
+  testCase("<a foo foo=baz>", { foo: "" });
+  testCase("<a foo=bar foo=baz>", { foo: "bar" });
+  testCase("<a/foo>", { foo: "" });
+  testCase("<a/foo=bar>", { foo: "bar" });
+  testCase("<a /foo>", { foo: "" });
+  testCase("<a /foo=bar>", { foo: "bar" });
+  testCase("<a/ foo>", { foo: "" });
+  testCase("<a/ foo=bar>", { foo: "bar" });
+
+  testCase("<a foo=bar a=b>", { foo: "bar", a: "b" });
+  testCase("<a foo= bar a=b>", { foo: "bar", a: "b" });
+  testCase("<a foo =bar a=b>", { foo: "bar", a: "b" });
+  testCase("<a foo=\"bar\" a=b>", { foo: "bar", a: "b" });
+  testCase("<a foo= \"bar\" a=b>", { foo: "bar", a: "b" });
+  testCase("<a foo =\"bar\" a=b>", { foo: "bar", a: "b" });
+  testCase("<a foo=\"bar\"a=b>", { foo: "bar", a: "b" });
+  testCase("<a foo='bar' a=b>", { foo: "bar", a: "b" });
+  testCase("<a foo= 'bar' a=b>", { foo: "bar", a: "b" });
+  testCase("<a foo ='bar' a=b>", { foo: "bar", a: "b" });
+  testCase("<a foo='bar'a=b>", { foo: "bar", a: "b" });
+
+  testCase("<a foo==== a=b>", { foo: "===", a: "b" });
+  testCase("<a foo=&&& a=b>", { foo: "&&&", a: "b" });
+  testCase("<a foo=<<< a=b>", { foo: "<<<", a: "b" });
+  testCase("<a foo=f\"oo a=b>", { foo: "f\"oo", a: "b" });
+  testCase("<a foo=f'oo a=b>", { foo: "f'oo", a: "b" });
+  testCase("<a foo=\"===\" a=b>", { foo: "===", a: "b" });
+  testCase("<a foo=\"&&&\" a=b>", { foo: "&&&", a: "b" });
+  testCase("<a foo=\"<<<\" a=b>", { foo: "<<<", a: "b" });
+  testCase("<a foo=\"f'oo\" a=b>", { foo: "f'oo", a: "b" });
+  testCase("<a foo='===' a=b>", { foo: "===", a: "b" });
+  testCase("<a foo='&&&' a=b>", { foo: "&&&", a: "b" });
+  testCase("<a foo='<<<' a=b>", { foo: "<<<", a: "b" });
+  testCase("<a foo='f\"oo' a=b>", { foo: "f\"oo", a: "b" });
+
+  testCase("<a\rfoo>", { foo: "" });
+  testCase("<a\nfoo>", { foo: "" });
+  testCase("<a\r\nfoo>", { foo: "" });
+  testCase("<a\ffoo>", { foo: "" });
+  testCase("<a\tfoo>", { foo: "" });
+  testCase("<a\r\n \r \n \t \ffoo>", { foo: "" });
+
+  testCase("<a foo=&quot;foo&quot;>", { foo: "\"foo\"" });
+  testCase("<a foo=&#97;&#x61;a>", { foo: "aaa" });
+  testCase("<a foo=\"&quot;foo&quot;\">", { foo: "\"foo\"" });
+  testCase("<a foo=\"&#97;&#x61;a\">", { foo: "aaa" });
+  testCase("<a foo='&quot;foo&quot;'>", { foo: "\"foo\"" });
+  testCase("<a foo='&#97;&#x61;a'>", { foo: "aaa" });
+
+  testCase("<a foo=&lt;&lt&lt=&ltx;>", { foo: "<<&lt=&ltx;" });
+  testCase("<a foo=&#97&#97;&#97=;&#x61&#x61;&#x61=;>", { foo: "aaa=;aaa=;" });
+  testCase("<a foo=\"&lt;&lt&lt=&ltx;\">", { foo: "<<&lt=&ltx;" });
+  testCase("<a foo=\"&#97&#97;&#97=;&#x61&#x61;&#x61=;\">", { foo: "aaa=;aaa=;" });
+  testCase("<a foo='&lt;&lt&lt=&ltx;'>", { foo: "<<&lt=&ltx;" });
+  testCase("<a foo='&#97&#97;&#97=;&#x61&#x61;&#x61=;'>", { foo: "aaa=;aaa=;" });
 });
 
 describe("normalizeTagName", () => {
